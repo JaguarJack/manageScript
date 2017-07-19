@@ -1,12 +1,9 @@
 <?php
-define('DS', DIRECTORY_SEPARATOR);
-define('ROOT_PATH', __DIR__ . DS);//定义根目录路径
-define('CORE_PATH', ROOT_PATH . 'core' . DS);//定义类文件存储路径
-define('LOG_PATH', ROOT_PATH . 'log' . DS);//定义日志路径
-define('CONFIG_PATH', ROOT_PATH . 'config' .DS);//定义配置文件路径
-include_once CORE_PATH .'start'. EXT;
+include_once './core/start.php';
 
 use Core\Cen\Query;
+use Core\Cen\Config;
+use Core\Cen\Log;
 
 class Master
 {
@@ -29,15 +26,19 @@ class Master
     private $daeme;
     //Master_id
     public $master_id;
+    //server 配置
+    private $master_config;
+    
     private $status = false;
     //信息
     private $message = '[ %s ] : %s';
 
-    public function __construct($host,$port)
+    public function __construct($host = '',$port = '')
     {
         
-        $this->host = $host;
-        $this->port = $port;
+        $this->master_config = Config::get('config')['master'];
+        $this->host = $host ? : $this->master_config['host'];
+        $this->port = $port ? : $this->master_config['port'];
         $this->script_dir =  ROOT_PATH . 'index.php';
         $this->php  = getenv('_');
         $this->server =  $this->server ?  :
@@ -50,6 +51,13 @@ class Master
      */
     protected function set()
     {
+        $this->params['daemonize'] = $this->master_config['daeme'];
+        if ($this->master_config['pid_file'])
+            $this->params['pid_file'] = $this->master_config['pid_file'];
+        
+        $this->params['log_file'] = $this->master_config['log_path'];
+        $this->params['log_level'] = $this->master_config['log_level'];
+        
         $this->server->set($this->params);
     }
     
@@ -252,16 +260,6 @@ class Master
     {
         return sprintf($this->message,date('Y-m-d H:i:s'), $msg . PHP_EOL);
     }
-    /**
-     * @description:设置属性
-     * @author wuyanwen(2017年4月17日)
-     * @param unknown $key
-     * @param unknown $value
-     */
-    public function __set($key,$value)
-    {
-        $this->params[$key] = $value;
-    }
      
     /**
      * @description:开启服务
@@ -270,25 +268,14 @@ class Master
     public function start()
     {
         //设置参数
-        if (!empty($this->params)) 
-            $this->set();
+        $this->set();
         //接收消息
         $this->receive();
         //启动server
         $this->server->start();        
-    }
-      
-}
-$master_config = \Core\Cen\Config::get('config')['master'];
-$host = $master_config['host'];
-$port = $master_config['port'];
-$server = new Master($host,$port);
-$server->daemonize = $master_config['daeme'];
-if ($master_config['pid_file']) {
-    $server->pid_file = $master_config['pid_file'];
+    }      
 }
 
-$server->log_file = $master_config['log_path'];
-$server->log_level = $master_config['log_level'];
-\Core\Cen\Log::write(\Core\Cen\Log::INFO, '@守护进程已经启动');
+$server = new Master();
+Log::write(Log::INFO, sprintf('[ %s ] @守护进程已经启动'),date('Y-m-d H:i:s'));
 $server->start();
