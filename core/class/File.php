@@ -210,4 +210,22 @@ class File
     {
         return $this->deleteDirectory($directory, true);
     }
+    
+    /**
+     * @description:include file
+     * @author wuyanwen(2017年7月19日)
+     */
+    public function includeFile($file)
+    {
+        return include_once $file;
+    }
+    
+    /**
+     * @description:require file
+     * @author wuyanwen(2017年7月19日)
+     */
+    public function requireFile($file)
+    {
+        return require_once $file;
+    }
 }
