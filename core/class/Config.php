@@ -1,6 +1,8 @@
 <?php
 namespace Core\Cen;
 
+use Core\Cen\File;
+
 class Config
 {
     private static $config = [];
@@ -111,15 +113,16 @@ class Config
      */
     private static function load()
     {   
+        $file = new File;
         $pattern = CONFIG_PATH . '*' .EXT;
         //获取config文件
-        $files = glob($pattern);
+        $config_files = $file->glob($pattern);
         //加载config文件
-        foreach ($files as $file) {
+        foreach ($config_files as $config_file) {
             //获取文件名
-            $file_name = basename($file, EXT);
+            $config_file_name = basename($config_file, EXT);
             //加载config配置
-            self::$config[$file_name] = include $file;
+            self::$config[$config_file_name] = $file->includeFile($config_file);
         }
     }
 }
