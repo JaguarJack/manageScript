@@ -10,14 +10,8 @@ define('CONFIG_PATH', ROOT_PATH . 'config' .DS);//定义配置文件路径
 define('HELPER_PATH', ROOT_PATH . 'helper' . DS);//助手函数
 define('EXT','.php');//定义文件后缀
 
-include_once CORE_PATH .'start'. EXT;
 //助手函数
 include_once HELPER_PATH . 'helper' . EXT;
-//引入基类
-include_once ROOT_PATH . DS . 'scripts' .DS. 'Base' . EXT;
-//引入脚本文件
-include_once ROOT_PATH . DS . 'scripts' .DS. $argv[1] . EXT;
-
 
 require_once 'Autoload.php';
 
