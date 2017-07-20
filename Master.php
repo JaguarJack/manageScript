@@ -120,15 +120,12 @@ class Master
         if (isset($this->scripts[$script]) && $this->scripts[$script]) {
             echo $this->sendMessage( $script . '脚本正在运行中~');
         } else {
-            //启动脚本
-            try {
-                $process = new swoole_process(function($process) use ($script){
-                    $process->name(sprintf('php worker %s', $script));
-                    $process->exec($this->php,[$this->script_dir,$script]);
-                    },true);
-            } catch (\Exception $e) {
-                throw new \Exception($e->getMessage());
-            }
+            //启动脚本            
+            $process = new swoole_process(function($process) use ($script){
+                $process->name(sprintf('php worker %s', $script));
+                $process->exec($this->php,[$this->script_dir,$script]);
+                },true);
+            
             $pid = $process->start();
             //脚本
             if (!$pid) {
@@ -136,13 +133,14 @@ class Master
                 $message = sprintf('进程错误码 : %d 进程错误信息: %s ',$error_code,swoole_strerror($error_code));
                 $message .= $script . '脚本启动失败';
                 echo $this->sendMessage($message);
-            }
-            //存储脚本信息
-            $this->scripts[$script] = $pid;
-            //存储脚本运行的开始时间
-            $this->script_start_time[$script] = time();
-            echo $this->sendMessage($script .'脚本启动成功~');
-            $this->updateStatus($script);
+            } else {
+                //存储脚本信息
+                $this->scripts[$script] = $pid;
+                //存储脚本运行的开始时间
+                $this->script_start_time[$script] = time();
+                echo $this->sendMessage($script .'脚本启动成功~');
+                $this->updateStatus($script); 
+            }  
         }
         
     }
