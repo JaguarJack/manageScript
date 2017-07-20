@@ -73,17 +73,17 @@ class Master
         $this->server->on('receive', function ($server, $fd, $from_id, $data){
             //解析脚本操作
             try {
-            list($option,$script) = explode(',', $data);
-            //执行操作
-            $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
-            //发送执行结果
-            $server->send($fd,json_encode($msg));
-            //关闭连接
-            $this->server->close($fd);
-            //脚本信号接收
-            if (!$this->status) {
-                $this->dealSignal();
-            }
+                list($option,$script) = explode(',', $data);
+                //执行操作
+                $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
+                //发送执行结果
+                $server->send($fd,json_encode($msg));
+                //关闭连接
+                $this->server->close($fd);
+                //脚本信号接收
+                if (!$this->status) {
+                    $this->dealSignal();
+                }
             } catch (\Exception $e) {
                 echo $e->getMessage() . PHP_EOL;
                 echo $e->getTraceAsString();
@@ -107,7 +107,6 @@ class Master
                     unset($this->script_start_time[$script]);
                     $this->updateStatus($script,2);
                     echo $this->sendMessage($script .'脚本退出');
-                   // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本退出');
                 }
             }
         });
@@ -120,7 +119,6 @@ class Master
     {
         if (isset($this->scripts[$script]) && $this->scripts[$script]) {
             echo $this->sendMessage( $script . '脚本正在运行中~');
-            //echo sprintf($this->message,date('Y-m-d H:i:s'),);
         } else {
             //启动脚本
             try {
@@ -138,7 +136,6 @@ class Master
                 $message = sprintf('进程错误码 : %d 进程错误信息: %s ',$error_code,swoole_strerror($error_code));
                 $message .= $script . '脚本启动失败';
                 echo $this->sendMessage($message);
-                //echo sprintf($this->message,date('Y-m-d H:i:s'), $message);
             }
             //存储脚本信息
             $this->scripts[$script] = $pid;
@@ -146,7 +143,6 @@ class Master
             $this->script_start_time[$script] = time();
             echo $this->sendMessage($script .'脚本启动成功~');
             $this->updateStatus($script);
-            //echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本启动成功~');
         }
         
     }
@@ -164,17 +160,11 @@ class Master
                 unset($this->script_start_time[$script]);
                 $this->updateStatus($script, 2);
                 echo $this->sendMessage($script .'脚本已经停止~');
-               //echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本已经停止~');
-                //return $this->msg(10001,'脚本已经停止~');
             } else {
                 echo $this->sendMessage($script .'脚本停止操作失败~');
-              // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本停止操作失败~');
-                //return $this->msg(10001,'脚本停止操作失败~');
             }
         } else {
-            // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本未启动~');
              echo $this->sendMessage($script . '脚本未启动~');
-            //return $this->msg(10001,'脚本未启动~');
         }
     }
 
@@ -187,12 +177,8 @@ class Master
         if (isset($this->scripts[$script]) && $this->scripts[$script]) {
             $msg = $this->countTime($this->script_start_time[$script], time());
             echo $this->sendMessage($script . '脚本正在运行中~已经运行'.$msg);
-           //echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本正在运行中~已经运行'.$msg);
-          // return $this->msg(10001,'脚本正在运行中~已经运行'.$msg);
         } else {
             echo $this->sendMessage($script . '脚本未启动~');
-          // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本未启动~');
-           //return $this->msg(10001,'脚本未启动~');
         }
     }
     /**
@@ -214,17 +200,12 @@ class Master
     {
          
         $day_time = 24 * 3600;
-
         $time = $end_time - $start_time;
-
         //运行小于一天
         if ($time < $day_time) return gmstrftime('%H时%M分%S秒', $time);
-
         //运行大于一天
         $days = floor($time / $day_time);
-
         $time_str = gmstrftime('%H时%M分%S秒', $time % $day_time);
-
         return $days.'天'.$time_str;
     }
     
