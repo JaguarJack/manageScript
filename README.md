@@ -10,10 +10,14 @@ php Master.php 启动守护进程
 php Client.php start script_name
 
 约定：
-script目录为脚本开发目录
+script目录为脚本开发目录,每个脚本必须继承Base,必须实现exec方法
+class script extends Base
+{
+    public function exec(){}
+}
 
 目的：
-  使没有服务器权限的开发人员也可以启动脚本
+  没有服务器权限的开发人员 也具备脚本运行权限
 
 后期改进：
-  利用websocket直接在后台进行管理
+  后台进行管理
