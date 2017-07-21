@@ -1,9 +1,12 @@
 <?php
-include_once './core/start.php';
+define('DS', DIRECTORY_SEPARATOR);
+define('ROOT_PATH', __DIR__ . DS);//定义根目录路径
+define('CORE_PATH', ROOT_PATH . 'core' . DS);//定义类文件存储路径
+define('LOG_PATH', ROOT_PATH . 'log' . DS);//定义日志路径
+define('CONFIG_PATH', ROOT_PATH . 'config' .DS);//定义配置文件路径
+include_once CORE_PATH .'start'. EXT;
 
 use Core\Cen\Query;
-use Core\Cen\Config;
-use Core\Cen\Log;
 
 class Master
 {
@@ -26,19 +29,15 @@ class Master
     private $daeme;
     //Master_id
     public $master_id;
-    //server 配置
-    private $master_config;
-    
     private $status = false;
     //信息
     private $message = '[ %s ] : %s';
 
-    public function __construct($host = '',$port = '')
+    public function __construct($host,$port)
     {
         
-        $this->master_config = Config::get('config')['master'];
-        $this->host = $host ? : $this->master_config['host'];
-        $this->port = $port ? : $this->master_config['port'];
+        $this->host = $host;
+        $this->port = $port;
         $this->script_dir =  ROOT_PATH . 'index.php';
         $this->php  = getenv('_');
         $this->server =  $this->server ?  :
@@ -51,13 +50,6 @@ class Master
      */
     protected function set()
     {
-        $this->params['daemonize'] = $this->master_config['daeme'];
-        if ($this->master_config['pid_file'])
-            $this->params['pid_file'] = $this->master_config['pid_file'];
-        
-        $this->params['log_file'] = $this->master_config['log_path'];
-        $this->params['log_level'] = $this->master_config['log_level'];
-        
         $this->server->set($this->params);
     }
     
@@ -73,17 +65,17 @@ class Master
         $this->server->on('receive', function ($server, $fd, $from_id, $data){
             //解析脚本操作
             try {
-                list($option,$script) = explode(',', $data);
-                //执行操作
-                $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
-                //发送执行结果
-                $server->send($fd,json_encode($msg));
-                //关闭连接
-                $this->server->close($fd);
-                //脚本信号接收
-                if (!$this->status) {
-                    $this->dealSignal();
-                }
+            list($option,$script) = explode(',', $data);
+            //执行操作
+            $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
+            //发送执行结果
+            $server->send($fd,json_encode($msg));
+            //关闭连接
+            $this->server->close($fd);
+            //脚本信号接收
+            if (!$this->status) {
+                $this->dealSignal();
+            }
             } catch (\Exception $e) {
                 echo $e->getMessage() . PHP_EOL;
                 echo $e->getTraceAsString();
@@ -107,6 +99,7 @@ class Master
                     unset($this->script_start_time[$script]);
                     $this->updateStatus($script,2);
                     echo $this->sendMessage($script .'脚本退出');
+                   // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本退出');
                 }
             }
         });
@@ -119,13 +112,17 @@ class Master
     {
         if (isset($this->scripts[$script]) && $this->scripts[$script]) {
             echo $this->sendMessage( $script . '脚本正在运行中~');
+            //echo sprintf($this->message,date('Y-m-d H:i:s'),);
         } else {
-            //启动脚本            
-            $process = new swoole_process(function($process) use ($script){
-                $process->name(sprintf('php worker %s', $script));
-                $process->exec($this->php,[$this->script_dir,$script]);
-                },true);
-            
+            //启动脚本
+            try {
+                $process = new swoole_process(function($process) use ($script){
+                    $process->name(sprintf('php worker %s', $script));
+                    $process->exec($this->php,[$this->script_dir,$script]);
+                    },true);
+            } catch (\Exception $e) {
+                throw new \Exception($e->getMessage());
+            }
             $pid = $process->start();
             //脚本
             if (!$pid) {
@@ -133,14 +130,15 @@ class Master
                 $message = sprintf('进程错误码 : %d 进程错误信息: %s ',$error_code,swoole_strerror($error_code));
                 $message .= $script . '脚本启动失败';
                 echo $this->sendMessage($message);
-            } else {
-                //存储脚本信息
-                $this->scripts[$script] = $pid;
-                //存储脚本运行的开始时间
-                $this->script_start_time[$script] = time();
-                echo $this->sendMessage($script .'脚本启动成功~');
-                $this->updateStatus($script); 
-            }  
+                //echo sprintf($this->message,date('Y-m-d H:i:s'), $message);
+            }
+            //存储脚本信息
+            $this->scripts[$script] = $pid;
+            //存储脚本运行的开始时间
+            $this->script_start_time[$script] = time();
+            echo $this->sendMessage($script .'脚本启动成功~');
+            $this->updateStatus($script);
+            //echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本启动成功~');
         }
         
     }
@@ -158,11 +156,17 @@ class Master
                 unset($this->script_start_time[$script]);
                 $this->updateStatus($script, 2);
                 echo $this->sendMessage($script .'脚本已经停止~');
+               //echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本已经停止~');
+                //return $this->msg(10001,'脚本已经停止~');
             } else {
                 echo $this->sendMessage($script .'脚本停止操作失败~');
+              // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本停止操作失败~');
+                //return $this->msg(10001,'脚本停止操作失败~');
             }
         } else {
+            // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本未启动~');
              echo $this->sendMessage($script . '脚本未启动~');
+            //return $this->msg(10001,'脚本未启动~');
         }
     }
 
@@ -175,8 +179,12 @@ class Master
         if (isset($this->scripts[$script]) && $this->scripts[$script]) {
             $msg = $this->countTime($this->script_start_time[$script], time());
             echo $this->sendMessage($script . '脚本正在运行中~已经运行'.$msg);
+           //echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本正在运行中~已经运行'.$msg);
+          // return $this->msg(10001,'脚本正在运行中~已经运行'.$msg);
         } else {
             echo $this->sendMessage($script . '脚本未启动~');
+          // echo sprintf($this->message,date('Y-m-d H:i:s'), $script . '脚本未启动~');
+           //return $this->msg(10001,'脚本未启动~');
         }
     }
     /**
@@ -198,12 +206,17 @@ class Master
     {
          
         $day_time = 24 * 3600;
+
         $time = $end_time - $start_time;
+
         //运行小于一天
         if ($time < $day_time) return gmstrftime('%H时%M分%S秒', $time);
+
         //运行大于一天
         $days = floor($time / $day_time);
+
         $time_str = gmstrftime('%H时%M分%S秒', $time % $day_time);
+
         return $days.'天'.$time_str;
     }
     
@@ -239,6 +252,16 @@ class Master
     {
         return sprintf($this->message,date('Y-m-d H:i:s'), $msg . PHP_EOL);
     }
+    /**
+     * @description:设置属性
+     * @author wuyanwen(2017年4月17日)
+     * @param unknown $key
+     * @param unknown $value
+     */
+    public function __set($key,$value)
+    {
+        $this->params[$key] = $value;
+    }
      
     /**
      * @description:开启服务
@@ -247,14 +270,25 @@ class Master
     public function start()
     {
         //设置参数
-        $this->set();
+        if (!empty($this->params)) 
+            $this->set();
         //接收消息
         $this->receive();
         //启动server
         $this->server->start();        
-    }      
+    }
+      
+}
+$master_config = \Core\Cen\Config::get('config')['master'];
+$host = $master_config['host'];
+$port = $master_config['port'];
+$server = new Master($host,$port);
+$server->daemonize = $master_config['daeme'];
+if ($master_config['pid_file']) {
+    $server->pid_file = $master_config['pid_file'];
 }
 
-$server = new Master();
-Log::write(Log::INFO, sprintf('[ %s ] @守护进程已经启动'),date('Y-m-d H:i:s'));
+$server->log_file = $master_config['log_path'];
+$server->log_level = $master_config['log_level'];
+\Core\Cen\Log::write(\Core\Cen\Log::INFO, '@守护进程已经启动');
 $server->start();
