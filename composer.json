@@ -1,0 +1,23 @@
+{
+    "name": "manage/scripts",
+    "description": "基于swoole的socket 进程管理",
+    "keywords": ["socket","swoole","多进程"],
+    "homepage": "https://github.com/yanwenwu/manageScript",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.0",
+        "ext-swoole": ">=1.8.9"
+    },
+    "authors": [
+        {
+            "name": "wuyanwen",
+            "email": "wuyanwen1992@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Core\\Cen\\": "core"
+        }
+    },
+    
+}
