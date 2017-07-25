@@ -1,5 +1,4 @@
 <?php
-header("Content-type: text/html; charset=utf-8");
 date_default_timezone_set('PRC');//设置时区
 set_time_limit(0);
 define('DS', DIRECTORY_SEPARATOR);
