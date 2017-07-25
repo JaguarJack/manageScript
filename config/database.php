@@ -3,9 +3,9 @@ return [
     'type'     => 'mysql',
     'host'     => 'mysql',
     'port'     => '3306',
-    'user'     => 'root',
-    'dbname'   => 'test',
-    'password' => 'wuyanwen9201412',
+    'user'     => '',
+    'dbname'   => '',
+    'password' => '',
     'charset'  => '',
     'timeout'  => '30',
     'params'   => [
