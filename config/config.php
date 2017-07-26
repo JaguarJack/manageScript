@@ -15,5 +15,7 @@ return [
         'log_path'  => LOG_PATH . 'swoole.log',
         'log_level' => 0,
         'is_allow_repeat' => 0,
+        'is_kill_process' => true,//主进程结束，是否结束所有子进程
+        'is_reload_process' => false,//子进程结束后是否重新拉起
     ],
 ];
