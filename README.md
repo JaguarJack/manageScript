@@ -26,4 +26,4 @@ class script extends Base
 
 以client.php为原型，可开发后台管理，便于开发人员在后台直接管理脚本。
 
-![image](https://github.com/yanwenwu/manageScript/edit/master/start.png)
+![image](https://github.com/yanwenwu/manageScript/blob/master/start.png)
