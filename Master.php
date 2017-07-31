@@ -120,7 +120,7 @@ class Master
      */
     public function startScript($script)
     {
-        if (isset($this->scripts[$script]) && $this->scripts[$script] && !$this->master_config['is_allow_repeat']) {
+        if (isset($this->scripts[$script]) && $this->scripts[$script] && !$this->is_reload_process) {
             return $this->echoMessage($script . '脚本正在运行中~');
         } else {
             //启动多个脚本进程
@@ -296,7 +296,7 @@ class Master
     private function echoMessage($message)
     {
         echo $this->sendMessage($message);
-        //Log::write(Log::INFO, $message);
+        Log::write(Log::INFO, $message);
         return $message;
     }
     /**
@@ -344,25 +344,7 @@ class Master
                 //unset($this->script_start_time[$script]);
                 //$this->updateStatus($script,2);
                 return $this->echoMessage($script .'worker pid '.$pid.'脚本退出');
-           }
-        
-        //list($script, $key) = $this->searchScriptByPid($pid);
-        //var_dump($this->scripts[$script]);
-        //if (isset($this->scripts[$script]) && !empty($this->scripts[$script])) {
-            //if (!$this->master_config['is_reload_process']) {
-                   // $this->delScriptPid($script,$key);
-                   // $_pid = $this->createNewProcess($script);
-                   // $msg = sprintf('Worker %s pid %d %s', $script, $_pid, $_pid ? '启动成功' : '启动失败');
-                    //if ($_pid) $this->scripts[$script][] = $_pid;
-                    //$this->echoMessage($msg);
-            //} else {
-               // $this->delScriptPid($script, $key);
-                //unset($this->scripts[$script]);
-                //unset($this->script_start_time[$script]);
-                //$this->updateStatus($script,2);
-               // return $this->echoMessage($script .'worker pid '.$pid.'脚本退出');
-           // }
-       // }
+        }
     }
     
     /**
