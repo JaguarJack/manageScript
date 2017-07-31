@@ -1,5 +1,5 @@
 <?php
-include_once './core/start.php';
+include_once __DIR__ . '/core/start.php';
 
 use Core\Cen\Query;
 use Core\Cen\Config;
@@ -29,7 +29,8 @@ class Master
     public $master_id;
     //server 配置
     private $master_config;
-    
+    //是否拉起进程,默认false
+    private $is_reload_process = false;
     private $status = false;
     //信息
     private $message = '[ %s ] : %s';
@@ -37,9 +38,12 @@ class Master
     public function __construct($host = '',$port = '')
     {
         
-        $this->master_config = Config::get('config')['master'];
+        $this->master_config = Config::get('config.master');
         $this->host = $host ? : $this->master_config['host'];
         $this->port = $port ? : $this->master_config['port'];
+        if (isset($this->master_config['is_reload_process'])) {
+            $this->is_reload_process = $this->master_config['is_reload_process'];
+        }
         $this->script_dir =  ROOT_PATH . 'index.php';
         $this->php  = getenv('_');
         $this->server =  $this->server ?  :
@@ -61,8 +65,7 @@ class Master
         
         $this->server->set($this->params);
     }
-    
-    
+
     /**
      * @description:接收消息
      * @author wuyanwen(2017年4月17日)
@@ -71,6 +74,7 @@ class Master
     {
 
         $server = $this->server;
+
         $this->server->on('receive', function ($server, $fd, $from_id, $data){
             //解析脚本操作
             try {
@@ -81,15 +85,14 @@ class Master
                 $server->send($fd,json_encode($msg));
                 //关闭连接
                 $this->server->close($fd);
-                //脚本信号接收
-                if (!$this->status) {
-                    $this->dealSignal();
-                }
             } catch (\Exception $e) {
                 echo $e->getMessage() . PHP_EOL;
                 echo $e->getTraceAsString();
             }
-            
+            //脚本信号接收
+            if (!$this->status) {
+                $this->dealSignal();
+            }
         });
     }
 
@@ -98,21 +101,15 @@ class Master
      * @author wuyanwen(2017年4月26日)
      */
     protected function dealSignal()
-    {   
-        $this->status = true;
+    {   $this->status = true;
         swoole_process::signal(SIGCHLD, function($signo) {
             //必须为false，非阻塞模式
-            while($result =  swoole_process::wait(false)) {
-                $script = array_search($result['pid'], $this->scripts);
-                if (isset($this->scripts[$script]) && $this->scripts[$script]) {
-                    if (!$this->master_config['is_reload_process']) {
-                        return $this->createNewProcess($script);
-                    } else {
-                        unset($this->scripts[$script]);
-                        unset($this->script_start_time[$script]);
-                        //$this->updateStatus($script,2);
-                        return $this->echoMessage($script .'脚本退出');
-                    }
+            while(true) {
+                $result =  swoole_process::wait(false);
+                if ($result['pid']){
+                    $this->dealSign($result['pid']);
+                } else {
+                    break;
                 }
             }
         });
@@ -123,11 +120,26 @@ class Master
      */
     public function startScript($script)
     {
-        if (isset($this->scripts[$script]) && $this->scripts[$script]) {
+        if (isset($this->scripts[$script]) && $this->scripts[$script] && !$this->master_config['is_allow_repeat']) {
             return $this->echoMessage($script . '脚本正在运行中~');
         } else {
-            //启动脚本            
-            return $this->createNewProcess($script);
+            //启动多个脚本进程
+            if ($this->is_reload_process) {
+                if (isset($this->scripts[$script]) && count($this->scripts[$script]) >= $this->master_config['worker_num']) {
+                    return '脚本教程超过最大配置的worker的数量';
+                }
+                $pid = $this->createNewProcess($script);
+                if ($pid)
+                    $this->scripts[$script][] = $pid;
+                $msg = sprintf('%s Worker pid %d %s', $script, $pid, $pid ? '启动成功' : '启动失败');
+                return $this->echoMessage($msg);
+            //启动单个脚本进程
+            } else {
+                $pid = $this->createNewProcess($script);
+                $msg = sprintf('%s Worker pid %d %s', $script, $pid, $pid ? '启动成功' : '启动失败');
+                $this->scripts[$script][] = $pid;
+                return $this->echoMessage($msg);
+            }        
         }
         
     }
@@ -153,19 +165,18 @@ class Master
      */
     private function stopProcess($script)
     {
-        if (isset($this->scripts[$script]) && $this->scripts[$script]) {
-            $result = swoole_process::kill($this->scripts[$script]);
-            if ($result) {
-                unset($this->scripts[$script]);
-                unset($this->script_start_time[$script]);
-                //$this->updateStatus($script, 2);
-                return $this->echoMessage($script .'脚本已经停止~');
-            } else {
-                return $this->echoMessage($script .'脚本停止操作失败~');
+        if (isset($this->scripts[$script]) && !empty($this->scripts[$script])) {
+            $message = [];
+            foreach ($this->scripts[$script] as $script_pid) {
+                $result = swoole_process::kill($script_pid);       
+                $msg = sprintf('Script %s 进程号pid %d %s', $script, $script_pid, $result ? '已经结束' : '未能结束，请手动kill');
+                $message[] = $msg;
+                $this->echoMessage($msg);
             }
+            return $message;
         } else {
             return $this->echoMessage($script . '脚本未启动~');
-        }
+        } 
     }
     /**
      *description:停止Master 进程
@@ -174,15 +185,22 @@ class Master
      */
     private function stopMaster()
     {
+        //如果没有记录主进程pid，则无法结束主进程
+        if (!file_exists($this->master_config['pid_file']))
+            return '为记录主进程pid，无法执行该操作，请先设置pid_file';
         $master_pid = file_get_contents($this->master_config['pid_file']);
         if (swoole_process::kill($master_pid)) {
-            echo $this->sendMessage('Master pid ' . $master_pid . '结束');
-            Log::write(Log::INFO, 'Master pid ' . $master_pid . '结束');
+            $msg = 'Master pid ' . $master_pid . '结束';
+            echo $this->sendMessage($msg);
+            Log::write(Log::INFO, $msg);
             if ($this->master_config['is_kill_process']) {
-                foreach ($this->scripts as $scripts => $script_pid) {
-                    if (swoole_process::kill($script_pid)) {
-                        echo $this->sendMessage('Script pid ' . $scripts . '结束');
-                        Log::write(Log::INFO, 'Script ' . $scripts . '结束');
+                foreach ($this->scripts as $scripts => $script_pids) {
+                    foreach ($script_pids as $key => $script_pid) {
+                        if (swoole_process::kill($script_pid)) {
+                            $msg = sprintf('Script %s worker pid %d 结束', $scripts, $script_pid);
+                            echo $this->sendMessage($msg);
+                            Log::write(Log::INFO, $msg);
+                        }
                     }
                 }
             }
@@ -204,14 +222,14 @@ class Master
             return $this->echoMessage($script . '脚本未启动~');
         }
     }
-
+    
     /**
      * @description:脚本信息
      * @author wuyanwen(2017年4月19日)
      * @param unknown $code
      * @param unknown $msg
      */
-    protected function msg($code = 10000,$msg = '')
+    protected function msg($code = 10000, $msg = '')
     {
         return ['code' => $code, 'msg' => $msg];
     }
@@ -230,7 +248,7 @@ class Master
         //运行大于一天
         $days = floor($time / $day_time);
         $time_str = gmstrftime('%H时%M分%S秒', $time % $day_time);
-        return $days.'天'.$time_str;
+        return sprintf('%s天%s', $days, $time_str);
     }
     
     /**
@@ -239,7 +257,7 @@ class Master
      * @param unknown $script
      * @param number $update
      */
-    public function updateStatus($script, $update = 1)
+    private function updateStatus($script, $update = 1)
     {
         $query = new Query();
 
@@ -255,12 +273,27 @@ class Master
         }
     }
     
+    /**'
+     * @description:根据pid查询script
+     * @author wuyanwen(2017年7月27日)
+     * @param unknown $pid
+     * @return unknown
+     */
+    private function searchScriptByPid($pid)
+    {
+        foreach ($this->scripts as $script => $script_pids) {
+            $key = array_search($pid, $script_pids);
+            if ($key !== false) {
+                return [$script, $key];
+            }    
+        }
+    }
     /**
      *description:输入信息
      *@author:wuyanwen
      *@时间:2017年7月26日
      */
-    public function echoMessage($message)
+    private function echoMessage($message)
     {
         echo $this->sendMessage($message);
         Log::write(Log::INFO, $message);
@@ -277,28 +310,52 @@ class Master
         $process = new swoole_process(function($process) use ($script){
             try {
                 $process->exec($this->php,[$this->script_dir,$script]);
-                swoole_set_process_name('Script Worker ' . $script);
             } catch (ErrorException $e) {
-                echo $e->getMessage();
-                Log::write(Log::INFO, $script . '脚本正在运行中~');
-                throw new ErrorException($e->getMessage());
+                echo $msg = $e->getMessage();
+                Log::write(Log::INFO, $msg);
+                throw new ErrorException($msg);
             }
-        },true);
+        });
+                
         $pid = $process->start();
-        //脚本
-        if (!$pid) {
-            $error_code = swoole_errno();
-            $message = sprintf('进程错误码 : %d 进程错误信息: %s ',$error_code,swoole_strerror($error_code));
-            $message .= $script . '脚本启动失败';
-            return $this->echoMessage($message);
-        } else {
-            //存储脚本信息
-            $this->scripts[$script] = $pid;
-            //存储脚本运行的开始时间
-            $this->script_start_time[$script] = time();
-            //$this->updateStatus($script);
-            return $this->echoMessage($script .'脚本启动成功~');
-        }
+        
+        return $pid;
+    }
+    
+    /**
+     * @description:处理信号结果
+     * @author wuyanwen(2017年7月27日)
+     * @param unknown $pid
+     */
+    private function dealSign($pid)
+    {
+        if ($this->is_reload_process) {
+            list($script, $key) = $this->searchScriptByPid($pid);
+            $this->delScriptPid($script,$key);
+            $_pid = $this->createNewProcess($script);
+            $msg = sprintf('Worker %s pid %d %s', $script, $_pid, $_pid ? '启动成功' : '启动失败');
+            if ($_pid) $this->scripts[$script][] = $_pid;
+            $this->echoMessage($msg);
+        }else {
+                $this->delScriptPid($script, $key);
+                if (!count($this->scripts[$script])) {
+                    unset($this->scripts[$script]);
+                }
+                //$this->updateStatus($script,2);
+                return $this->echoMessage($script .'worker pid '.$pid.'脚本退出');
+           }
+    }
+    
+    /**
+     * description:删除脚本进程pid
+     * @author:wuyanwen
+     * @时间:2017年7月27日
+     * @param unknown $pid
+     * @param unknown $script
+     */
+    private function delScriptPid($script, $key)
+    {
+        unset($this->scripts[$script][$key]);
     }
     /**
      * @description:发送消息
@@ -321,10 +378,10 @@ class Master
         $this->set();
         //接收消息
         $this->receive();
-        swoole_set_process_name('Script Master');
+        swoole_set_process_name('php Script Master');
         //启动server
-        $this->server->start();        
-    }      
+        $this->server->start();       
+    } 
 }
 
 $server = new Master();
