@@ -42,6 +42,9 @@ class Query
     private $pdoState;
     //获取最后插入记录ID
     public $lastSqlId;
+    private $errors = [
+        'MySQL server has gone away',
+    ];
     
     /**
      * @description:获取数据库连接
@@ -49,9 +52,18 @@ class Query
      */
     public function __construct()
     {
-        $this->connect = DbConnect::instance();
+        $this->init();
     }
     
+    /**
+     * @description:初始化
+     * @author wuyanwen(2017年8月1日)
+     */
+    public function init()
+    {
+        if (null === $this->connect)
+            $this->connect = DbConnect::instance();
+    }
     /**
      * @description:开启一个事务
      * @author wuyanwen(2017年7月11日)
@@ -207,7 +219,7 @@ class Query
      */
     public function select()
     {
-        return $this->parseSelect();
+        return $this->excute($this->parseSelect(), __FUNCTION__, 2);
     }
     
     /**
@@ -216,7 +228,7 @@ class Query
      */
     public function count()
     {
-        return $this->parseSelect('count');
+        return $this->excute($this->parseSelect('count'), __FUNCTION__);
     }
     
     /**
@@ -225,7 +237,7 @@ class Query
      */
     public function max()
     {
-        return $this->parseSelect('max');    
+        return $this->excute($this->parseSelect('max'), __FUNCTION__);   
     }
     
     /**
@@ -234,7 +246,7 @@ class Query
      */
     public function min()
     {
-        return $this->parseSelect('min');
+        return $this->excute($this->parseSelect('min'), __FUNCTION__);
     }
     
     /**
@@ -243,7 +255,7 @@ class Query
      */
     public function distinct()
     {
-        return $this->parseSelect('distinct');
+        return $this->excute($this->parseSelect('distinct'), __FUNCTION__);
     }
     /**
      * description:查询一条记录
@@ -252,7 +264,7 @@ class Query
     public function find() 
     {
        $this->limit(1);       
-       return $this->parseSelect();
+       return $this->excute($this->parseSelect(), __FUNCTION__);
     }
     /**
      * description:插入一条记录
@@ -265,22 +277,11 @@ class Query
             $column .= sprintf('`%s`,', $key);
             $values .= sprintf('"%s",', $value);
         }
-        //解析insertSQL
-        $this->insertSQL = str_replace(['{table}','{field}','{value}'], 
+         //解析insertSQL
+        $insertSQL = str_replace(['{table}','{field}','{value}'], 
             [$this->table, trim($column,','), trim($values,',')], $this->insertSQL);
     
-        //执行pdo操作
-        try {
-            $this->pdoState =  $this->connect->prepare($this->insertSQL);
-            $this->pdoState->execute();
-            $result = $this->pdoState->rowCount();
-            //获取插入成功后ID
-            $this->lastSqlId = $this->connect->lastInsertId();
-            return $result;
-        }catch (PDOException $e) {
-            Log::write(Log::ERROR, $e->getMessage());
-            throw new ErrorException($e->getMessage());
-        }
+        return $this->excute($insertSQL, __FUNCTION__);
     }
     
     /**
@@ -294,28 +295,12 @@ class Query
             $data .= sprintf('%s = "%s",', $key, $value);
         }
         //解析updateSql
-        $this->updateSQL = str_replace(
+        $updateSQL = str_replace(
             ['{table}','{value}','{where}'], 
             [$this->table, trim($data, ','), $this->condition], 
             $this->updateSQL);
-
-        //预处理
-        try {
-            $this->pdoState = $this->connect->prepare(trim($this->updateSQL));
-            //绑定
-            if ($this->whereValue) {
-                foreach ($this->whereValue as $key => $value) {
-                    $this->pdoState->bindValue($key+1,$value);
-                }
-            }
-            //执行预处理
-            $this->pdoState->execute();
-            //返回执行结果
-            return $this->pdoState->rowCount();
-        }catch (PDOException $e) {
-            Log::write(Log::ERROR, "{$e->getMessage()}");
-            throw new ErrorException($e->getMessage());
-        }
+        
+        return $this->excute($updateSQL, __FUNCTION__);
     }
     
     /**
@@ -331,14 +316,22 @@ class Query
             $this->field = sprintf('%s(%s)', $option, $this->field);
 
         //替换
-        $this->selectSQL = str_replace(
+        return str_replace(
             ['{field}','{table}','{alias}','{join}','{where}','{order}','{limit}'],
             [$this->field,$this->table,$this->alias,$this->join,$this->condition,$this->order,$this->limit],
             $this->selectSQL);
-        
-        //预处理
+    }
+    
+    /**
+     * @description:执行sql
+     * @author wuyanwen(2017年8月1日)
+     * @param unknown $sql
+     */
+    public function excute($sql, $option, $args = 1)
+    {
+        $this->init();
         try {
-            $this->pdoState = $this->connect->prepare(trim($this->selectSQL));
+            $this->pdoState = $this->connect->prepare(trim($sql));
             //绑定
             if ($this->whereValue) {
                 foreach ($this->whereValue as $key => $value) {
@@ -348,10 +341,30 @@ class Query
             //执行预处理
             $this->pdoState->execute();
             //返回执行结果
-            return $option ? $this->pdoState->fetch(PDO::FETCH_NUM)[0] :
-                             $this->pdoState->fetchAll(PDO::FETCH_CLASS);
-            
-        }catch (PDOException $e) {
+            switch ($option) {
+                case 'create':
+                    $result = $this->pdoState->rowCount();
+                    //获取插入成功后ID
+                    $this->lastSqlId = $this->connect->lastInsertId();
+                    return $result;
+                case 'update':
+                    return  $this->pdoState->rowCount();
+                case 'delete':
+                    return $this->pdoState->rowCount();
+                default:
+                     return $args == 1 ? $this->pdoState->fetch(PDO::FETCH_NUM)[0] :
+                                        $this->pdoState->fetchAll(PDO::FETCH_CLASS);
+            }
+        } catch (PDOException $e) {
+            if ($this->ping($e->getMessage())) {
+                return $this->destory()->excute($sql, $option, $args);
+            }
+            Log::write(Log::ERROR, $e->getMessage());
+            throw new ErrorException($e->getMessage());
+        } catch (\Exception $e) {
+            if ($this->ping($e->getMessage())) {
+                return $this->destory()->excute($sql, $option, $args);
+            }
             Log::write(Log::ERROR, $e->getMessage());
             throw new ErrorException($e->getMessage());
         }
@@ -362,26 +375,10 @@ class Query
      */
     public function delete()
     {
-       $this->deleteSQL = str_replace(
+       $deleteSQL = str_replace(
            ['{table}','{where}'],[$this->table,$this->condition],$this->deleteSQL);
-       echo $this->deleteSQL;
-        //预处理
-        try {
-            $this->pdoState = $this->connect->prepare(trim($this->deleteSQL));
-            //绑定
-            if ($this->whereValue) {
-                foreach ($this->whereValue as $key => $value) {
-                    $this->pdoState->bindValue($key+1,$value);
-                }
-            }
-            //执行预处理
-            $this->pdoState->execute();
-            //返回执行结果
-            return $this->pdoState->rowCount();
-        }catch (PDOException $e) {
-            Log::write(Log::ERROR, $e->getMessage());
-            throw new ErrorException($e->getMessage());
-        }
+       
+       return $this->excute($deleteSQL, __FUNCTION__);
     }
     
     /**
@@ -406,6 +403,22 @@ class Query
         return isset($this->fields[$key]) ? $this->field[$key] : null;    
     }
     
+
+    /**
+     * @description:断线重连
+     * @author wuyanwen(2017年8月1日)
+     */
+    public function ping($error_msg)
+    {
+        foreach ($this->errors as $error) {
+            if (strpos($error_msg, $error) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     /**
      * @description:关闭连接
      * @author wuyanwen(2017年7月17日)
@@ -413,5 +426,15 @@ class Query
     public function destory()
     {
         $this->connect = null;
+        return $this;
+    }
+    
+    /**
+     * @description:魔术方法
+     * @author wuyanwen(2017年8月1日)
+     */
+    public function __call($method, $params)
+    {
+        return $this->excute($this->parseSelect($method), $method);
     }
 }

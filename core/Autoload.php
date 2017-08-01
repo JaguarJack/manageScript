@@ -25,6 +25,8 @@ class AutoLoad
     {   
         //加载映射
         self::addNameSpace();
+        //加载额外映射
+        self::loadExtraNamespace();
         //加载类文件
         self::loadClass($class);
         
@@ -40,6 +42,7 @@ class AutoLoad
             'Core\Cen'       => CORE_PATH . 'class' . DS,
             'Core\Cen\Cache' => CORE_PATH . 'class' . DS . 'cache' . DS,
         ];
+        
     }
     
     /**
@@ -55,7 +58,7 @@ class AutoLoad
         $class_name = @end(explode('\\',$class));
         //防止重复加载
         if (isset(self::$classTree[$class_name]))
-            return true;        
+            return true;
         $class_file = self::$classMap[$namespace] . $class_name . EXT;
         //类文件是否存在
         if (!file_exists($class_file)) 
@@ -72,6 +75,8 @@ class AutoLoad
      */
     private static function loadExtraNamespace()
     {
-        self::$classMap = array_merge(self::$classMap,Config::get('classMap'));
+        $classMap = CONFIG_PATH . 'classMap' . EXT;
+        
+        self::$classMap = array_merge(self::$classMap,$classMap);
     }
 }
