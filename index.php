@@ -2,7 +2,7 @@
 if ($argc < 2) exit('please input your start script name' . PHP_EOL);
 
 try {
-    require R00T_PATH . 'core/start.php';
+    require __DIR__ . '/core/start.php';
     
     //引入基类
     include_once ROOT_PATH . DS . 'scripts' .DS. 'Base' . EXT;
