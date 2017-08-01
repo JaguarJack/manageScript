@@ -42,6 +42,9 @@ class Query
     private $pdoState;
     //获取最后插入记录ID
     public $lastSqlId;
+    private $errors = [
+        'MySQL server has gone away',
+    ];
     
     /**
      * @description:获取数据库连接
@@ -49,9 +52,18 @@ class Query
      */
     public function __construct()
     {
-        $this->connect = DbConnect::instance();
+        $this->init();
     }
     
+    /**
+     * @description:初始化
+     * @author wuyanwen(2017年8月1日)
+     */
+    public function init()
+    {
+        if (null === $this->connect)
+            $this->connect = DbConnect::instance();
+    }
     /**
      * @description:开启一个事务
      * @author wuyanwen(2017年7月11日)
@@ -266,10 +278,10 @@ class Query
             $values .= sprintf('"%s",', $value);
         }
          //解析insertSQL
-        $this->insertSQL = str_replace(['{table}','{field}','{value}'], 
+        $insertSQL = str_replace(['{table}','{field}','{value}'], 
             [$this->table, trim($column,','), trim($values,',')], $this->insertSQL);
     
-        return $this->excute($this->insertSQL, __FUNCTION__);
+        return $this->excute($insertSQL, __FUNCTION__);
     }
     
     /**
@@ -283,12 +295,12 @@ class Query
             $data .= sprintf('%s = "%s",', $key, $value);
         }
         //解析updateSql
-        $this->updateSQL = str_replace(
+        $updateSQL = str_replace(
             ['{table}','{value}','{where}'], 
             [$this->table, trim($data, ','), $this->condition], 
             $this->updateSQL);
         
-        return $this->excute($this->updateSQL, __FUNCTION__);
+        return $this->excute($updateSQL, __FUNCTION__);
     }
     
     /**
@@ -304,12 +316,10 @@ class Query
             $this->field = sprintf('%s(%s)', $option, $this->field);
 
         //替换
-        $this->selectSQL = str_replace(
+        return str_replace(
             ['{field}','{table}','{alias}','{join}','{where}','{order}','{limit}'],
             [$this->field,$this->table,$this->alias,$this->join,$this->condition,$this->order,$this->limit],
             $this->selectSQL);
-        
-        return $this->selectSQL;
     }
     
     /**
@@ -317,8 +327,9 @@ class Query
      * @author wuyanwen(2017年8月1日)
      * @param unknown $sql
      */
-    public function excute($sql,$option,$args = 1)
+    public function excute($sql, $option, $args = 1)
     {
+        $this->init();
         try {
             $this->pdoState = $this->connect->prepare(trim($sql));
             //绑定
@@ -345,6 +356,15 @@ class Query
                                         $this->pdoState->fetchAll(PDO::FETCH_CLASS);
             }
         } catch (PDOException $e) {
+            if ($this->ping($e->getMessage())) {
+                return $this->destory()->excute($sql, $option, $args);
+            }
+            Log::write(Log::ERROR, $e->getMessage());
+            throw new ErrorException($e->getMessage());
+        } catch (\Exception $e) {
+            if ($this->ping($e->getMessage())) {
+                return $this->destory()->excute($sql, $option, $args);
+            }
             Log::write(Log::ERROR, $e->getMessage());
             throw new ErrorException($e->getMessage());
         }
@@ -355,10 +375,10 @@ class Query
      */
     public function delete()
     {
-       $this->deleteSQL = str_replace(
+       $deleteSQL = str_replace(
            ['{table}','{where}'],[$this->table,$this->condition],$this->deleteSQL);
        
-       return $this->excute($this->deleteSQL, __FUNCTION__);
+       return $this->excute($deleteSQL, __FUNCTION__);
     }
     
     /**
@@ -382,7 +402,23 @@ class Query
     {
         return isset($this->fields[$key]) ? $this->field[$key] : null;    
     }
+    
 
+    /**
+     * @description:断线重连
+     * @author wuyanwen(2017年8月1日)
+     */
+    public function ping($error_msg)
+    {
+        foreach ($this->errors as $error) {
+            if (strpos($error_msg, $error) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     /**
      * @description:关闭连接
      * @author wuyanwen(2017年7月17日)
@@ -390,6 +426,7 @@ class Query
     public function destory()
     {
         $this->connect = null;
+        return $this;
     }
     
     /**
