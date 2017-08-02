@@ -133,11 +133,13 @@ class Master
                 if ($pid)
                     $this->scripts[$script][] = $pid;
                 $msg = sprintf('%s Worker pid %d %s', $script, $pid, $pid ? '启动成功' : '启动失败');
+                $this->updateStatus($script);
                 return $this->echoMessage($msg);
             //启动单个脚本进程
             } else {
                 $pid = $this->createNewProcess($script);
                 $msg = sprintf('%s Worker pid %d %s', $script, $pid, $pid ? '启动成功' : '启动失败');
+                $this->updateStatus($script);
                 $this->scripts[$script][] = $pid;
                 return $this->echoMessage($msg);
             }        
@@ -266,11 +268,11 @@ class Master
         if ($update == 1) {
             $query->start_time = time();
             $query->status     = 2;
-            $query->where('name',$script)->update();
+            $query->where('script',$script)->update();
         } else {
             $query->end_time = time();
             $query->status   = 1;
-            $query->where('name',$script)->update();
+            $query->where('script',$script)->update();
         }
     }
     
@@ -330,8 +332,8 @@ class Master
      */
     private function dealSign($pid)
     {
+        list($script, $key) = $this->searchScriptByPid($pid);
         if ($this->is_reload_process) {
-            list($script, $key) = $this->searchScriptByPid($pid);
             $this->delScriptPid($script,$key);
             $_pid = $this->createNewProcess($script);
             $msg = sprintf('Worker %s pid %d %s', $script, $_pid, $_pid ? '启动成功' : '启动失败');
@@ -342,9 +344,8 @@ class Master
                 if (!count($this->scripts[$script])) {
                     unset($this->scripts[$script]);
                 }
-                //unset($this->script_start_time[$script]);
                 //$this->updateStatus($script,2);
-                return $this->echoMessage($script .'worker pid '.$pid.'脚本退出');
+                return $this->echoMessage(sprintf('%s Worker pid %d 脚本退出', $script, $pid));
         }
     }
     
