@@ -4,7 +4,7 @@
 基于swoole的简单的 Master Worker模型
 
 由单独的守护进程监听端口 
-php Master.php 启动守护进程
+php run.php 启动守护进程
 
 由 Client 端发送请求操作命令 start|stop|status
 php Client.php start script_name
