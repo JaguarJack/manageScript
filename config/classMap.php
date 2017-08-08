@@ -1,4 +1,5 @@
 <?php
 return [
-    'Core\Cen\Cache' => CORE_PATH . 'cache' . DS,  
+    'Vendor\\' => ROOT_PATH . 'vendor' . DS,
+    'Cron\\'   => ROOT_PATH . 'crobtab' . DS,
 ];
