@@ -133,7 +133,7 @@ class Process
     private function createProccess()
     {
         $script = $this->script_name;
-        $new_process = new \swoole_process([$this,'exec']);
+        $new_process = new \swoole_process([$this,'run']);
         
         $pid = $new_process->start();
         
@@ -142,8 +142,12 @@ class Process
         return $pid;
     }
     
-    
-    private function exec(swoole_process $worker)
+    /**
+     * 
+     * @description:worker run
+     * @author wuyanwen(2017年8月8日)
+     */
+    private function run(swoole_process $worker)
     {
         try {
             $worker->exec($this->php,[$this->script_index,$script]);

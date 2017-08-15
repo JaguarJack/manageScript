@@ -40,9 +40,8 @@ class AutoLoad
     private static function addNameSpace()
     {
         self::$classMap = [
-            'Core\\Cen\\'       => CORE_PATH . 'class' . DS,
+            'Core\\Cen\\'  => CORE_PATH . 'class' . DS,
         ];
-        
     }
     
     /**

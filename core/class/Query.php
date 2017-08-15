@@ -228,7 +228,7 @@ class Query
      */
     public function count()
     {
-        return $this->excute($this->parseSelect('count'), __FUNCTION__);
+        return $this->excute($this->parseSelect('count'));
     }
     
     /**
@@ -237,7 +237,7 @@ class Query
      */
     public function max()
     {
-        return $this->excute($this->parseSelect('max'), __FUNCTION__);   
+        return $this->excute($this->parseSelect('max'));   
     }
     
     /**
@@ -246,7 +246,7 @@ class Query
      */
     public function min()
     {
-        return $this->excute($this->parseSelect('min'), __FUNCTION__);
+        return $this->excute($this->parseSelect('min'));
     }
     
     /**
@@ -255,7 +255,7 @@ class Query
      */
     public function distinct()
     {
-        return $this->excute($this->parseSelect('distinct'), __FUNCTION__);
+        return $this->excute($this->parseSelect('distinct'));
     }
     /**
      * description:查询一条记录
@@ -264,7 +264,7 @@ class Query
     public function find() 
     {
        $this->limit(1);       
-       return $this->excute($this->parseSelect(), __FUNCTION__);
+       return $this->excute($this->parseSelect());
     }
     /**
      * description:插入一条记录
@@ -327,7 +327,7 @@ class Query
      * @author wuyanwen(2017年8月1日)
      * @param unknown $sql
      */
-    public function excute($sql, $option, $args = 1)
+    public function excute($sql, $option = '', $args = 1)
     {
         $this->init();
         try {

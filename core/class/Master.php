@@ -133,13 +133,13 @@ class Master
                 if ($pid)
                     $this->scripts[$script][] = $pid;
                 $msg = sprintf('%s Worker pid %d %s', $script, $pid, $pid ? '启动成功' : '启动失败');
-                $this->updateStatus($script);
+                //$this->updateStatus($script);
                 return $this->echoMessage($msg);
             //启动单个脚本进程
             } else {
                 $pid = $this->createNewProcess($script);
                 $msg = sprintf('%s Worker pid %d %s', $script, $pid, $pid ? '启动成功' : '启动失败');
-                $this->updateStatus($script);
+                //$this->updateStatus($script);
                 $this->scripts[$script][] = $pid;
                 return $this->echoMessage($msg);
             }        

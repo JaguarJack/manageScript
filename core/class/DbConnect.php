@@ -46,7 +46,6 @@ class DbConnect
     private static function connect()
     {
         self::getDsn();
-    
         try{
             return new \PDO(self::$dsn, self::$config['user'], self::$config['password'], self::$config['params']);
         }catch (\PDOException $e) {
@@ -77,8 +76,8 @@ class DbConnect
         self::$config['password'] = $dataBase['password'];
         self::$config['charset']  = $dataBase['charset'];
         self::$config['timeout']  = $dataBase['timeout'];
-        self::$config['params']   = !empty($dataBase['params']) ? $dataBase['params'] : self::$config['params'];
+        self::$config['params']   = $dataBase['params'];
     }
-    
+
     final private function __clone(){}
 }
