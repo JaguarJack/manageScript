@@ -9,6 +9,8 @@
 # * * * * * user-name command to be executed
 namespace Cron;
 
+use Cron\Task;
+
 class Parse
 {
     private $min;
@@ -17,17 +19,7 @@ class Parse
     private $week;
     private $day;
     private $crontab;
-    private $job_excute_time = [];
-    private $minperiodicTasksTime = [];
-    private $hourperiodicTasksTime = [];
-    # 任务分级
-    # 分级任务  
-    # 时级任务 
-    # 天级任务 
-    # 周级任务
-    # 月级任务
-    # 以此上在分为 周期性的任务(泛指以小时或是分钟为单位的周期性任务) 和 非周期任务
-    
+
     public function __construct($crontab)
     {
         $this->crontab = $crontab;
@@ -52,7 +44,7 @@ class Parse
      */
     private function parseMin()
     {
-        $result = $this->parseMark($this->min, 1, 59);
+        $result = $this->parseMark($this->min, 0, 59);
         
         if (!$result) return false;
         
@@ -66,7 +58,7 @@ class Parse
      */
     private function parseHour()
     {
-        $result = $this->parseMark($this->hour, 1, 23);
+        $result = $this->parseMark($this->hour, 0, 23);
         
         if (!$result) return false;
         
@@ -123,6 +115,9 @@ class Parse
      */
     private function parseMark($str, $start, $end)
     {
+        if ($str == '*') {
+            return range($start, $end);
+        }
         //优先级解析 ,
         if (strpos($str, ',')) {
             $numbers = explode(',', $str);
@@ -167,7 +162,6 @@ class Parse
         //如果是数字 直接返回
         if ($this->isNumber($str)){
             return [$str];
-            
         }
         
         return false;
@@ -235,14 +229,14 @@ class Parse
      * @author wuyanwen(2017年8月14日)
      */
     private function parseResult()
-    {
-        $this->job_excute_time['min']   = $this->parseMin();
-        $this->job_excute_time['hour']  = $this->parseHour();
-        $this->job_excute_time['day']   = $this->parseDay();
-        $this->job_excute_time['month'] = $this->parseMonth();
-        $this->job_excute_time['week']  = $this->parseWeek();
-        
-        return $this->job_excute_time;
+    {        
+        return  [
+            'min'   => $this->parseMin(),
+            'hour'  => $this->parseHour(),
+            'day'   => $this->parseDay(),
+            'month' => $this->parseMonth(),
+            'week'  => $this->parseWeek(),
+        ];
     }
     
     /**
@@ -253,21 +247,24 @@ class Parse
     public function isExcuted()
     {
         $jobsTime = $this->parseResult();
-        $min = date('i');
-        $hour = date('H');
-        $day  = date('d');
-        $month = date('m');
-        $week = date('w');
+
+        $min   = intval(date('i'));
+        $hour  = intval(date('G'));
+        $day   = intval(date('j'));
+        $month = intval(date('n'));
+        $week  = intval(date('w'));
+        
         if ($this->isConform($min, $jobsTime['min']) &&
             $this->isConform($hour, $jobsTime['hour']) &&
             $this->isConform($day, $jobsTime['day']) &&
             $this->isConform($month, $jobsTime['month']) &&
             $this->isConform($week, $jobsTime['week'])
             ) {
-               return true; 
+                return true;
             } else {
                 return false;
             }
+        
         
     }
     

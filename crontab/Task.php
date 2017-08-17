@@ -5,7 +5,7 @@ namespace Cron;
 use Core\Cen\Queue;
 
 class Task
-{
+{    
     private $queue;
     
     public function __construct()
@@ -20,12 +20,30 @@ class Task
      */
     public function getTask()
     {
-        if ($this->queue->exists('task')) {
-            while ($this->queue->llen('task')) {
-                
-            }
-        } else {
+        return $this->queue->rpop('task');
+    }
+    
+    /**
+     * 
+     * @description:任务队列是否存在
+     * @author wuyanwen(2017年8月17日)
+     */
+    public function isTaskQueueExist()
+    {
+        return $this->queue->exists('task');
+    }
+    
+    /**
+     * 
+     * @description:获取任务队列长度
+     * @author wuyanwen(2017年8月17日)
+     */
+    public function getTaskQueueLen()
+    {
+        if (!$this->isTaskQueueExist()) {
             return false;
-        } 
+        }
+            
+        return $this->queue->llen('task');
     }
 }

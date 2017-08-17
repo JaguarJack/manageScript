@@ -42,11 +42,11 @@ class TaskManage
        
         foreach ($tasks as $task) {
            
-            $parse = new Parse($task->crontab);
+           $parse = new Parse($task->crontab);
             
            //如果是可执行的任务，直接推送到队列中
            if ($parse->isExcuted()) {
-               $this->queue->rpush('task', $task->task_name);
+              $this->queue->rpush('task', $task->task_name);
            }
         }
     }
