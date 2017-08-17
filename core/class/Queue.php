@@ -30,7 +30,7 @@ class Queue
     protected function connect()
     {
         try {
-            $this->redis->pconnect($this->host, $this->port, $this->connect_time);
+            $this->redis->pconnect($this->host, $this->port);
             
             if ($this->password) {
                 $this->redis->auth($this->password);

@@ -98,7 +98,7 @@ class Master
      * @author wuyanwen(2017年4月26日)
      */
     protected function dealSignal()
-    {   $this->status = true;
+    {   
         \swoole_process::signal(SIGCHLD, function($signo) {
             //必须为false，非阻塞模式
             while(true) {

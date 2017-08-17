@@ -45,7 +45,7 @@ class Cache
      * @param unknown $value
      * @param unknown $life_time
      */
-    public function set($key, $value, $life_time)
+    public function set($key, $value, $life_time = 1800)
     {
         return $this->handle->set($key, $value, $life_time);
     }
