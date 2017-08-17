@@ -6,6 +6,7 @@ use Core\Cen\Query;
 use Core\Cen\Config;
 use Core\Cen\Log;
 use Core\Cen\ErrorException;
+use Core\Cen\Process;
 
 class Master
 {
@@ -35,7 +36,9 @@ class Master
     private $status = false;
     //信息
     private $message = '[ %s ] : %s';
-
+    //process对象
+    private $process;
+    
     public function __construct($host = '',$port = '')
     {
         
@@ -47,6 +50,7 @@ class Master
         }
         $this->script_dir =  ROOT_PATH . 'index.php';
         $this->php  = getenv('_');
+        $this->process = new Process;
         $this->server =  $this->server ?  :
         new \swoole_server($this->host, $this->port,SWOOLE_BASE,SWOOLE_SOCK_TCP);
     }
@@ -98,8 +102,9 @@ class Master
      * @author wuyanwen(2017年4月26日)
      */
     protected function dealSignal()
-    {   
-        \swoole_process::signal(SIGCHLD, function($signo) {
+    {
+        
+        $this->process->registerSignal(SIGCHLD, function($signo) {
             //必须为false，非阻塞模式
             while(true) {
                 $result =  \swoole_process::wait(false);
@@ -110,6 +115,17 @@ class Master
                 }
             }
         });
+        /* \swoole_process::signal(SIGCHLD, function($signo) {
+            //必须为false，非阻塞模式
+            while(true) {
+                $result =  \swoole_process::wait(false);
+                if ($result['pid']){
+                    $this->dealSign($result['pid']);
+                } else {
+                    break;
+                }
+            }
+        }); */
     }
     /**
      * @description:启动脚本
@@ -167,7 +183,7 @@ class Master
         if (isset($this->scripts[$script]) && !empty($this->scripts[$script])) {
             $message = [];
             foreach ($this->scripts[$script] as $script_pid) {
-                $result = \swoole_process::kill($script_pid);       
+                $result = $this->process->kill($script_pid);       
                 $msg = sprintf('Script %s 进程号pid %d %s', $script, $script_pid, $result ? '已经结束' : '未能结束，请手动kill');
                 $message[] = $msg;
                 $this->echoMessage($msg);
@@ -188,14 +204,14 @@ class Master
         if (!file_exists($this->master_config['pid_file']))
             return '为记录主进程pid，无法执行该操作，请先设置pid_file';
         $master_pid = file_get_contents($this->master_config['pid_file']);
-        if (\swoole_process::kill($master_pid)) {
+        if ($this->process->kill($master_pid)) {
             $msg = 'Master pid ' . $master_pid . '结束';
             echo $this->sendMessage($msg);
             Log::write(Log::INFO, $msg);
             if ($this->master_config['is_kill_process']) {
                 foreach ($this->scripts as $scripts => $script_pids) {
                     foreach ($script_pids as $key => $script_pid) {
-                        if (\swoole_process::kill($script_pid)) {
+                        if ($this->process->kill($script_pid)) {
                             $msg = sprintf('Script %s worker pid %d 结束', $scripts, $script_pid);
                             echo $this->sendMessage($msg);
                             Log::write(Log::INFO, $msg);
@@ -306,7 +322,8 @@ class Master
      */
     private function createNewProcess($script) 
     {
-        $process = new \swoole_process(function($process) use ($script){
+        
+        $pid = $this->process->createProccess(function(\swoole_process $process) use ($script){
             try {
                 $process->exec($this->php,[$this->script_dir,$script]);
             } catch (ErrorException $e) {
@@ -315,8 +332,18 @@ class Master
                 throw new ErrorException($msg);
             }
         });
+        
+        /* $process = new \swoole_process(function($process) use ($script){
+            try {
+                $process->exec($this->php,[$this->script_dir,$script]);
+            } catch (ErrorException $e) {
+                echo $msg = $e->getMessage();
+                Log::write(Log::INFO, $msg);
+                throw new ErrorException($msg);
+            }
+        }); 
                 
-        $pid = $process->start();
+        $pid = $process->start();*/
         
         return $pid;
     }
