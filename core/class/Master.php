@@ -66,7 +66,7 @@ class Master
         
         $this->server->set($this->params);
     }
-
+    
     /**
      * @description:接收消息
      * @author wuyanwen(2017年4月17日)
@@ -89,10 +89,6 @@ class Master
             } catch (\Exception $e) {
                 echo $e->getMessage() . PHP_EOL;
                 echo $e->getTraceAsString();
-            }
-            //脚本信号接收
-            if (!$this->status) {
-                $this->dealSignal();
             }
         });
     }
@@ -370,18 +366,31 @@ class Master
     {
         return sprintf($this->message,date('Y-m-d H:i:s'), $msg . PHP_EOL);
     }
-     
+    
+    /**
+     * 
+     * @description:信号注册处理
+     * @author wuyanwen(2017年8月17日)
+     */
+    private function workStart(){
+        $this->server->on('workerStart', function ($server){
+            swoole_set_process_name('php Script Master');
+            $this->dealSignal();
+        });
+    }
+    
     /**
      * @description:开启服务
      * @author wuyanwen(2017年4月14日)
      */
     public function start()
     {
+        
         //设置参数
         $this->set();
+        $this->workStart();
         //接收消息
         $this->receive();
-        swoole_set_process_name('php Script Master');
         //启动server
         $this->server->start();       
     } 
