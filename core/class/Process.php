@@ -1,5 +1,6 @@
 <?php
-namespace Cron;
+
+namespace Core\Cen;
 
 use Core\Cen\Log;
 
@@ -28,9 +29,8 @@ class Process
      * @description:回收任务
      * @author wuyanwen(2017年7月31日)
      */
-    public function stop($pid)
+    public function kill($pid)
     {
-        //杀死主进程PID
         $ret = \swoole_process::kill($pid);
         Log::write(Log::INFO, 'task pid is ' . $pid . $ret ? 'is over' : 'kill failure');
     }
