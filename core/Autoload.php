@@ -53,7 +53,6 @@ class AutoLoad
         $class_file = self::findFile($class);
         
         if (!$class_file) throw new \Exception($class . ' not found');
-    
         //加载文件
         require $class_file;
     }

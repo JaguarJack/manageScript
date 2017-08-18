@@ -99,4 +99,11 @@ class RedisCache implements CacheInterface
         return $this->prefiex . $key;
     }
     
+    
+    
+    public function __call($method, $params)
+    {
+        return $this->driver->{$method}($params);
+    }
+    
 }
