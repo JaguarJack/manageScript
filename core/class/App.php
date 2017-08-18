@@ -48,10 +48,13 @@ class App
         if (!$construct = $reflection->getConstructor()) {
             return new $argv[1];
         }
+        
+        //获取construct参数
         $params = $construct->getParameters();
         
         $dep = [];
         foreach ($params as $param) {
+            //如果非对象
             if (!$class = $param->getClass()) {
                 $dep[] = $param->getDefaultValue();
             } else {
@@ -60,7 +63,7 @@ class App
         }
         
         $instance = $reflection->newInstanceArgs($dep);
-
+        
         return $instance;
        
     }
