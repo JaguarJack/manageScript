@@ -3,6 +3,7 @@
 namespace Core\Cen;
 
 use ReflectionClass;
+use Core\Cen\DI;
 
 class App
 {
@@ -26,47 +27,14 @@ class App
     {
         $class = $this->namespace . '\\' . $argv[1];
         
-        $class  = $this->build($class);
- 
+        $class  = (new DI())->build($class);
+
         $method = $this->checkParnetClass($class);
         
         return $class->{$method}();
         
     }
     
-    
-    /**
-     * 
-     * @description:主要解析construct里面的
-     * @author wuyanwen(2017年8月18日)
-     */
-    public function build($class) 
-    {
-        $reflection = new \ReflectionClass($class);
-
-        //实现注入
-        if (!$construct = $reflection->getConstructor()) {
-            return new $argv[1];
-        }
-        
-        //获取construct参数
-        $params = $construct->getParameters();
-        
-        $dep = [];
-        foreach ($params as $param) {
-            //如果非对象
-            if (!$class = $param->getClass()) {
-                $dep[] = $param->getDefaultValue();
-            } else {
-                $dep[] = new $class->name;
-            } 
-        }
-        
-        $instance = $reflection->newInstanceArgs($dep);
-        
-        return $instance;
-       
-    }
     
     /**
      * 
