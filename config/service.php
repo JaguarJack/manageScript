@@ -1,15 +1,19 @@
 <?php
 
 use Core\Cen\Query;
-use Core\Cen\DI;
 use Core\Cen\Queue;
+use Core\Cen\Cache;
 
-$di = new DI;
+$query = function (){
+    return new Query();
+};
+$queue = function (){
+    return new Queue();
+};
 
-$di->set('query',Core\Cen\Queue::class);
-
-$di->set = Core\Cen\Process::class;
-
-$di->set('queue',function(){
-   return new Queue(); 
-});
+return [
+    ['query', $query],
+    ['queue', $queue],
+    ['file', Core\Cen\File::class, true],
+    ['cache', Cache::class],
+];

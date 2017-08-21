@@ -18,6 +18,8 @@ return [
         'host' => '172.17.0.1',
         'port' => '6379',
         'password' => '',
+        'timeout'  => 10,
+        'isLong'   => true,
     ],
     
     'life_time' => 1800,
