@@ -11,7 +11,11 @@ class RedisConnection
     
     private function __construct(){}
     
-    
+    /**
+     * 
+     * @description:返回redis单例
+     * @author wuyanwen(2017年8月21日)
+     */
     public static function instance()
     {
         if (self::$instance == null) {
@@ -21,6 +25,11 @@ class RedisConnection
         return self::$instance;
     }
     
+    /**
+     * 
+     * @description:初始化链接
+     * @author wuyanwen(2017年8月21日)
+     */
     private static function init()
     {
         self::getConfig();
