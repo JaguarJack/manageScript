@@ -16,32 +16,9 @@ class Queue
     private $password;
     public function __construct()
     {
-        $redis_config = Config::get('cache.redis');
-        $this->host = $redis_config['host'];
-        $this->port = $redis_config['port'];
-        $this->password = $redis_config['password'];
         $this->redis = RedisConnection::instance();
-        $this->connect();
     }
-    
-    /**
-     * @description:链接redis
-     * @author wuyanwen(2017年7月19日)
-     */
-    protected function connect()
-    {
-        try {
-            $this->redis->pconnect($this->host, $this->port);
-            
-            if ($this->password) {
-                $this->redis->auth($this->password);
-            } 
-        } catch (\RedisException $e) {
-            throw new ErrorException($e->getMessage());
-        }
-        
-    }
-    
+
     /**
      * @description:左入列表
      * @author wuyanwen(2017年7月19日)
@@ -50,9 +27,10 @@ class Queue
      */
     public function lpush($key, $value)
     {
-        if (is_string($value))
+        if (!is_array($value)) {
             return $this->redis->lPush($key, $value);
-        
+        }
+
         $success = true;
         if (is_array($value)) {
             foreach ($value as $v) {
@@ -75,7 +53,7 @@ class Queue
      */
     public function rpush($key, $value)
     {
-        if (is_string($value))
+        if (!is_array($value))
             return $this->redis->rPush($key, $value);
         
         $success = true;

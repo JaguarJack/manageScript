@@ -18,28 +18,9 @@ class RedisCache implements CacheInterface
     
     public function __construct()
     {
-        $redis_config = Config::get('cache.redis');
-        $this->host = $redis_config['host'];
-        $this->port = $redis_config['port'];
-        $this->password = $redis_config['password'];
-        $this->connect_time = $redis_config['timeout'];
         $this->life_time = Config::get('life_time');
         $this->prefiex = Config::get('cache.prefiex');
         $this->redis = RedisConnection::instance();
-        //$this->connect();
-    }
-    
-    /**
-     * @description:连接redis
-     * @author wuyanwen(2017年7月18日)
-     */
-    public function connect()
-    {
-        try {
-            $this->redis->pconnect($this->host, $this->port);
-        }catch(\RedisException $e) {
-            throw new \Exception($e->getMessage());
-        }
     }
     
    /**
