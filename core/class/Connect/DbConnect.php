@@ -1,5 +1,5 @@
 <?php
-namespace Core\Cen;
+namespace Core\Cen\Connect;
 
 use Core\Cen\Config;
 use Core\Cen\ErrorException;
@@ -8,7 +8,7 @@ class DbConnect
 {
     private static $instance = null;
     private static $dsn;
-    private static $config = [
+    public static $config = [
         'type' => '',
         'host' => '',
         'port' => '',
