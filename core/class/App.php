@@ -3,19 +3,20 @@
 namespace Core\Cen;
 
 use ReflectionClass;
-use Core\Cen\DI;
+use Core\Cen\Di;
+use Core\Cen\ErrorException;
 
-class App
+class App extends Di
 {
     private $namespace;
     
     public function __construct($namespace = '')
-    {
+    { 
         if (!$namespace) {
             throw new \ErrorException('Please Set Task NameSpace First');
         }
-        
         $this->namespace = $namespace;
+        parent::__construct();
     }
     
     /**
@@ -25,10 +26,10 @@ class App
      */
     public function run($argv)
     {
-        $class = $this->namespace . '\\' . $argv[1];
+        $class  = $this->namespace . '\\' . $argv[1];
         
-        $class  = (new DI())->build($class);
-
+        $class  = $this->build($class);
+        
         $method = $this->checkParnetClass($class);
         
         return $class->{$method}();
@@ -56,19 +57,15 @@ class App
         }
         
         $methods = $parent_class->getMethods();
-        
-        $isHasAbstract = false;
-        
+
         foreach ($methods as $method) {
             if ($method->isAbstract()) {
-                $isHasAbstract = true;
                 return $method->name;
             }
-        }
+        } 
         
-        if ($isHasAbstract === false) {
-            exit('Subclass Must Be Has A Abstract Method');
-        }
+       throw new ErrorException('Subclass Must Be Has A Abstract Method');
+        
     }
     
     /**
