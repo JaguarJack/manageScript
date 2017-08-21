@@ -15,9 +15,9 @@ class Cache
     //缓存句柄
     private $handle;
     
-    public function __construct($driver = '')
+    public function __construct()
     {
-        $this->driver = $driver ?  : Config::get('cache.default_driver');
+        $this->driver = Config::get('cache.default_driver');
         $this->handle = $this->getCacheHandle();
     }
     
@@ -110,6 +110,18 @@ class Cache
     public function memcacheDriver()
     {
         return new Memcache;
+    }
+    
+    /**
+     * 
+     * @description:设置驱动
+     * @author wuyanwen(2017年8月21日)
+     */
+    public function __get($driver) 
+    {
+        $this->driver = $driver;
+        $this->handle = $this->getCacheHandle();
+        return $this;
     }
 
 }

@@ -5,6 +5,7 @@ namespace Core\Cen;
 use Redis;
 use Core\Cen\Cobfig;
 use Core\Cen\ErrorException;
+use Core\Cen\Connect\RedisConnection;
 
 class Queue
 {
@@ -19,7 +20,7 @@ class Queue
         $this->host = $redis_config['host'];
         $this->port = $redis_config['port'];
         $this->password = $redis_config['password'];
-        $this->redis = new Redis;
+        $this->redis = RedisConnection::instance();
         $this->connect();
     }
     

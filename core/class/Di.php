@@ -2,9 +2,18 @@
 
 namespace Core\Cen;
 
-class DI implements \ArrayAccess
+use Core\Cen\Config;
+use Core\Cen\ErrorException;
+
+class Di implements \ArrayAccess
 {
     private $singletons;
+    private $instance;
+    
+    public function __construct()
+    {
+        $this->registerService();
+    }
     /**
      * @authr: wuyanwen
      * @description:注入
@@ -12,11 +21,16 @@ class DI implements \ArrayAccess
      * @param unknown $value
      * @param string $share
      */
-    public function set($key, $value, $share = false)
+    public function set($key, $value, $shared = false)
     { 
         if (isset($this->singletons[$key])) {
             return false;
         }
+        
+        if ($shared) {
+            return $this->singletons[$key] = compact('value', 'shared');
+        }
+        
         return $this->singletons[$key] = $value;
     }
     
@@ -29,22 +43,29 @@ class DI implements \ArrayAccess
     */
     public function get($key)
     {
-        if (isset($this->singletons[$key])) {
-            //如果是对象
-            if (is_object($this->singletons[$key])) {
-                return $this->build($this->singletons[$key]);
-            }
-            
-            if ($this->singletons[$key] instanceof \Closure) {
-                return $this->build(call_user_func($this->singletons[$key]));
-            }
-            
-            if (is_string($this->singletons[$key])) {
-                return $this->build(new $this->singletons[$key]);
-            }
+        $shared = $this->isShared($key);
+        //如果设置为共享
+        if ($shared && isset($this->instance[$key])) {
+            return $this->instance[$key];
         }
-        
-        throw new \ErrorException($key . ' Class Is Not Setter');
+        //解析对象
+        if (isset($this->singletons[$key])) {
+            $resloved_class = $shared ? $this->singletons[$key]['value'] : $this->singletons[$key];
+            if ($resloved_class instanceof \Closure) {
+                $resloved_class = call_user_func($resloved_class);
+            }
+            
+            if (is_string($resloved_class)) {
+                $resloved_class =  new $resloved_class;
+            }
+            
+            if ($shared) {
+                $this->instance[$key] = $resloved_class;
+            }
+
+            return $resloved_class;
+        }
+        throw new ErrorException($key . ' Class Is Not Setter');
     }
     
     /**
@@ -60,13 +81,12 @@ class DI implements \ArrayAccess
         if (!$reflection->isInstantiable()) {
             throw new ErrorException($class .' Class Can Not Instanttiable');
         }
-        
         //检查是否定义了DI属性
-       if ($reflection->hasProperty('Di')) {
-           $reflection->setStaticPropertyValue('Di', $this);
+       if ($reflection->hasProperty('di')) {
+           $reflection->setStaticPropertyValue('di', $this);
        }
         //实现注入
-        if (!$construct = $reflection->getConstructor()) {
+       if (!$construct = $reflection->getConstructor()) {
             if (is_object($class)) {
                 return $class;
             } else {
@@ -80,7 +100,7 @@ class DI implements \ArrayAccess
         $dep = $this->parseParameters($params);
         
         $instance = $reflection->newInstanceArgs($dep);
-        var_dump($instance);
+        
         return $instance;
         
     }
@@ -105,15 +125,60 @@ class DI implements \ArrayAccess
         return $dep;
     }
     
+    /**
+     * 
+     * @description:是否共享
+     * @author wuyanwen(2017年8月21日)
+     */
+    private function isShared($key)
+    {
+        if (is_array($this->singletons[$key])) {
+            return $this->singletons[$key]['shared'] ?? false;
+        }
+        
+        return false;
+        
+    }
+    
+    /**
+     * 
+     * @description:注册服务
+     * @author wuyanwen(2017年8月21日)
+     */
+    private function registerService()
+    {
+        $services = Config::get('service');
+        
+        if (!empty($services)) {
+            foreach ($services as $service) {
+                $this->set($service[0], $service[1], $this->isSetShared($service));
+            }
+        }
+        
+    }
+    
+    /**
+     * 
+     * @description:是否设置为共享服务
+     * @author wuyanwen(2017年8月21日)
+     */
+    public function isSetShared($service)
+    {
+        if (count($service) == 2) {
+            return false;
+        }
+        
+        return isset($service[2]) ? (bool)$service[2] : false;
+    }
     
     public function __set($offset, $value)
     {
-        return $this->singletons[$offset] = $value;
+        return $this->set($offset, $value);
     }
     
     public function __get($offset)
     {
-        return $this->singletons[$offset];    
+        return $this->get($offset);    
     }
     
     public function __isset($offset)
@@ -133,12 +198,12 @@ class DI implements \ArrayAccess
     
     public function offsetGet($offset)
     {
-        return $this->singletons[$offset];
+        return $this->get($offset);
     }
     
     public function offsetSet($offset, $value)
     {
-        return $this->singletons[$offset] = $value;
+        return $this->set($offset, $value);
     }
 
     public function offsetUnset($offset)

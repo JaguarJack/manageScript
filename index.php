@@ -2,7 +2,9 @@
 
 include __DIR__ . '/core/start.php';
 
-$app = new Core\Cen\App('Script');
+$namespace = 'Script';
+
+$app = new Core\Cen\App($namespace);
 
 $app->run($argv);
 

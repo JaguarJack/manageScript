@@ -1,7 +1,7 @@
 <?php
 namespace Core\Cen;
 
-use Core\Cen\DbConnect;
+use Core\Cen\Connect\DbConnect;
 use Core\Cen\ErrorException;
 use PDO;
 use PDOException;

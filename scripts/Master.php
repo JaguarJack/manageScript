@@ -5,13 +5,12 @@ class Master
 {
     public function exec()
     {
-     $a = 0;
-        for ($i = 0; $i < 10 ;$i++) {
+    
+       
             $query = new Query();
-            $table = $query->table('runoob_tbl');
-            $table->runoob_title = 'wuyanwen' . $i;
-            $table->runoob_author = 'author' . $i;
-            $table->create();
-        }        
+            sleep(10);
+            var_dump($query->table('scripts')->field('id')->where('script','test')->sum());
+            var_dump($query->table('scripts')->field('id')->where('id',1,'>')->min());
+             
     }
 }

@@ -5,6 +5,7 @@ namespace Core\Cen\Cache;
 use Core\Cen\Config;
 use Core\Cen\Cache\CacheInterface;
 use Redis;
+use Core\Cen\Connect\RedisConnection;
 
 class RedisCache implements CacheInterface
 {
@@ -21,11 +22,11 @@ class RedisCache implements CacheInterface
         $this->host = $redis_config['host'];
         $this->port = $redis_config['port'];
         $this->password = $redis_config['password'];
-        $this->connect_time = $redis_config['connect_time'];
-        $this->life_time = $redis_config['life_time'];
+        $this->connect_time = $redis_config['timeout'];
+        $this->life_time = Config::get('life_time');
         $this->prefiex = Config::get('cache.prefiex');
-        $this->redis = new Redis;
-        $this->connect();
+        $this->redis = RedisConnection::instance();
+        //$this->connect();
     }
     
     /**
@@ -50,7 +51,7 @@ class RedisCache implements CacheInterface
     {
         if ($life_time === 0) 
             return $this->redis->set($this->key($key), $value);
-        
+
         return $this->redis->setex($this->key($key), $life_time ? : $this->life_time, serialize($value));
     }
     
