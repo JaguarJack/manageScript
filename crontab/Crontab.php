@@ -4,7 +4,7 @@ namespace Cron;
 
 use Cron\Task;
 use Core\Cen\Log;
-use Cron\Process;
+use Core\Cen\Process;
 use Core\Cen\Config;
 use Core\Cen\ErrorException;
 use Cron\TaskManage;
@@ -26,10 +26,10 @@ class Crontab
     private $task_config;
     //task对象
     private $task_queue;
+    
     public function __construct()
     {
         $this->task_config = Config::get('task');
-        
         $this->php          = $_ENV['_'];
         $this->task_index   = $this->task_config['directory'];
         $this->task_num     = $this->task_config['task_num'] ?? 1;
@@ -64,9 +64,10 @@ class Crontab
      */
     public function start()
     {
-        //$this->process->deamon();
+        $this->process->deamon();
         $this->process->setTaskName('php Crond Master');
         $pid = getmypid();
+        file_put_contents($this->task_config['pid_file'], $pid);
         Log::write(Log::INFO, 'Crontab Service Start Success');
         $this->registerSignal();
         $this->alarm();
