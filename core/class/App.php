@@ -16,7 +16,6 @@ class App extends Di
             throw new \ErrorException('Please Set Task NameSpace First');
         }
         $this->namespace = $namespace;
-        parent::__construct();
     }
     
     /**
