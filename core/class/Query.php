@@ -437,4 +437,14 @@ class Query
     {
         return $this->excute($this->parseSelect($method), $method);
     }
+    
+    /**
+     * @description:切换连接
+     * @author wuyanwen(2017年8月22日)
+     */
+    public function __invoke(array $config)
+    {
+        $this->connect = DbConnect::free()::instance($config);
+        return $this;
+    }
 }

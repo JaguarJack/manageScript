@@ -10,15 +10,30 @@ use Core\Cen\Connect\RedisConnection;
 class Queue
 {
     //redis句柄
-    private $redis;
+    private $redis = null;
     private $host;
     private $port;
     private $password;
+    
+    /**
+     * @description:魔术方法
+     * @author wuyanwen(2017年8月22日)
+     */
     public function __construct()
     {
-        $this->redis = RedisConnection::instance();
+        $this->init();
     }
-
+    
+    /**
+     * 
+     * @description:初始化
+     * @author wuyanwen(2017年8月22日)
+     */
+    public function init()
+    {
+        if (null === $this->redis) 
+            $this->redis = RedisConnection::instance();
+    }
     /**
      * @description:左入列表
      * @author wuyanwen(2017年7月19日)
@@ -70,8 +85,11 @@ class Queue
     }
     
     /**
-     * @description:列表长度
-     * @author wuyanwen(2017年7月19日)
+     * 
+     * @description:获取队列长度
+     * @author wuyanwen(2017年8月22日)
+     * @param unknown $key
+     * @return unknown
      */
     public function llen($key)
     {
@@ -220,6 +238,15 @@ class Queue
         return $this->redis->exec();
     }
     
-    
+    /**
+     * 
+     * @description:设置参数
+     * @author wuyanwen(2017年8月22日)
+     */
+    public function __invoke(array $config)
+    {
+        $this->redis = RedisConnection::free()::instance($config);
+        return $this;
+    }
     
 }

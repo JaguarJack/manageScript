@@ -9,11 +9,6 @@ class Di implements \ArrayAccess
 {
     private $singletons;
     private $instance;
-    
-    public function __construct()
-    {
-        $this->registerService();
-    }
     /**
      * @authr: wuyanwen
      * @description:注入
@@ -81,10 +76,9 @@ class Di implements \ArrayAccess
         if (!$reflection->isInstantiable()) {
             throw new ErrorException($class .' Class Can Not Instanttiable');
         }
-        //检查是否定义了DI属性
-       if ($reflection->hasProperty('di')) {
-           $reflection->setStaticPropertyValue('di', $this);
-       }
+        
+        //设置DI
+        $this->setDiProperty($reflection, $class);
         //实现注入
        if (!$construct = $reflection->getConstructor()) {
             if (is_object($class)) {
@@ -93,7 +87,7 @@ class Di implements \ArrayAccess
                 return new $class;
             }
         }
-
+        
         //获取construct参数
         $params = $construct->getParameters();
         
@@ -103,6 +97,22 @@ class Di implements \ArrayAccess
         
         return $instance;
         
+    }
+    /**
+     * @description:设置di属性
+     * @author wuyanwen(2017年8月22日)
+     */
+    private function setDiProperty($reflection, $class)
+    {
+        //检查是否定义了DI属性,如果定义了di属性则注入服务
+        if ($reflection->hasProperty('di')) {
+            if ((new \ReflectionProperty($class, 'di'))->isPublic()) {
+                $this->registerService();
+                $reflection->setStaticPropertyValue('di', $this);
+            } else {
+                throw new \ErrorException('Property Di Must Be Public');
+            }
+        }
     }
     
     /**

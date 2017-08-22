@@ -115,17 +115,6 @@ class Master
                 }
             }
         });
-        /* \swoole_process::signal(SIGCHLD, function($signo) {
-            //必须为false，非阻塞模式
-            while(true) {
-                $result =  \swoole_process::wait(false);
-                if ($result['pid']){
-                    $this->dealSign($result['pid']);
-                } else {
-                    break;
-                }
-            }
-        }); */
     }
     /**
      * @description:启动脚本
@@ -137,7 +126,7 @@ class Master
             return $this->echoMessage($script . '脚本正在运行中~');
         } else {
             //启动多个脚本进程
-            if ($this->master_config['is_allow_repeat']) {
+            if ($this->master_config['worker_num'] > 1) {
                 if (isset($this->scripts[$script]) && count($this->scripts[$script]) >= $this->master_config['worker_num']) {
                     return '脚本教程超过最大配置的worker的数量';
                 }
@@ -210,7 +199,7 @@ class Master
             Log::write(Log::INFO, $msg);
             if ($this->master_config['is_kill_process']) {
                 foreach ($this->scripts as $scripts => $script_pids) {
-                    foreach ($script_pids as $key => $script_pid) {
+                    foreach ($script_pids as $script_pid) {
                         if ($this->process->kill($script_pid)) {
                             $msg = sprintf('Script %s worker pid %d 结束', $scripts, $script_pid);
                             echo $this->sendMessage($msg);
@@ -332,18 +321,6 @@ class Master
                 throw new ErrorException($msg);
             }
         });
-        
-        /* $process = new \swoole_process(function($process) use ($script){
-            try {
-                $process->exec($this->php,[$this->script_dir,$script]);
-            } catch (ErrorException $e) {
-                echo $msg = $e->getMessage();
-                Log::write(Log::INFO, $msg);
-                throw new ErrorException($msg);
-            }
-        }); 
-                
-        $pid = $process->start();*/
         
         return $pid;
     }
