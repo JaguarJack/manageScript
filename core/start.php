@@ -1,4 +1,5 @@
 <?php
+defined('TASK_START') or define('TASK_START', microtime(true));
 date_default_timezone_set('PRC');//设置时区
 set_time_limit(0);
 defined('DS') or define('DS', DIRECTORY_SEPARATOR);
