@@ -8,30 +8,47 @@ use Core\Cen\ErrorException;
 
 class App extends Di
 {
-    private $namespace;
+    private $namespace = 'Script';
+    private $task;
     
-    public function __construct($namespace = '')
+    public function __construct(array $argv)
     { 
-        if (!$namespace) {
-            throw new \ErrorException('Please Set Task NameSpace First');
-        }
-        $this->namespace = $namespace;
+        $this->init($argv);
     }
     
+    /**
+     * @description:初始化设置
+     * @author wuyanwen(2017年8月23日)
+     * @param unknown $argv
+     */
+    public function init($argv)
+    {
+        switch (count($argv)) {
+            case 2:
+                $this->task = $argv[1];
+                break;
+            case 3:
+                $this->namespace = $argv[1];
+                $this->task      = $argv[2];
+                break;
+            default:
+                throw new \ErrorException('Please Check The Argv Params');
+        }
+    }
     /**
      * 
      * @description:执行方法
      * @author wuyanwen(2017年8月18日)
      */
-    public function run($argv)
+    public function run()
     {
-        $class  = $this->namespace . '\\' . $argv[1];
+        $class  = $this->namespace . '\\' . $this->task;
         
         $class  = $this->build($class);
         
         $method = $this->checkParnetClass($class);
         
-        return $class->{$method}();
+        return call_user_func([$class, $method]);
         
     }
     
