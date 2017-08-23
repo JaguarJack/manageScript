@@ -25,8 +25,11 @@ class File
      */
     public function write($message, $lock = 0) 
     {
-        if (!$lock)
-            return $this->handle->fwrite($message);
+        if (!$lock) {
+            $this->handle->fwrite($message);
+            return true;
+        }
+            
 
         //获取独占锁
         $this->handle->flock($lock);
