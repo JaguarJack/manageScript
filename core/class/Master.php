@@ -77,9 +77,6 @@ class Master
      */
     protected function receive()
     {
-
-        $server = $this->server;
-
         $this->server->on('receive', function ($server, $fd, $from_id, $data){
             //解析脚本操作
             try {
@@ -87,7 +84,7 @@ class Master
                 //执行操作
                 $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
                 //发送执行结果
-                $server->send($fd,json_encode($msg));
+                $this->server->send($fd,json_encode($msg));
                 //关闭连接
                 $this->server->close($fd);
             } catch (\Exception $e) {
@@ -107,7 +104,7 @@ class Master
         $this->process->registerSignal(SIGCHLD, function($signo) {
             //必须为false，非阻塞模式
             while(true) {
-                $result =  \swoole_process::wait(false);
+                $result =  $this->process->wait();
                 if ($result['pid']){
                     $this->dealSign($result['pid']);
                 } else {

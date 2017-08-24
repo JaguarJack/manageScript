@@ -90,7 +90,6 @@ class Log
         
         //日志记录
         $message = sprintf('[ %s ]%s : %s' . PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $info);
-        
         if ($type) {
             $log_file = $daily_log_path . $type . self::LOGEXT;
             self::$file->open($log_file, 'a')->write($message, LOCK_EX);
@@ -106,6 +105,7 @@ class Log
             $logs_arr = self::$file->glob($daily_log_path . '*' .self::LOGEXT);
             self::$log_num = count($logs_arr);
             $log_file = $daily_log_path . self::$log_num . self::LOGEXT;
+            //防止重复
             if (self::$file->exists($log_file) && self::$file->fileSize($log_file) > self::$log_config['size']) {
                 $log_file = $daily_log_path . (self::$log_num + 1) . self::LOGEXT;
             }

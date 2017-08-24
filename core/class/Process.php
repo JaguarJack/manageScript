@@ -39,7 +39,7 @@ class Process
      * @description:创建脚本
      * @author wuyanwen(2017年7月31日)
      */
-    public function createProccess(callable $closure, $task_name = '')
+    public function createProccess(callable $closure)
     {
         
        if (!$closure instanceof \Closure) {
@@ -47,13 +47,8 @@ class Process
        }
         
        $process = new \swoole_process($closure);        
-        
-      /*   if ($task_name) {
-            $this->setTaskName($task_name);
-        } */
-        
-        $pid = $process->start();
-        return $pid; 
+       $pid = $process->start();
+       return $pid; 
     }
     
     /**
@@ -70,9 +65,9 @@ class Process
      * @description:设置定时器
      * @author wuyanwen(2017年8月17日)
      */
-    public function alarm($time = 60 * 1000 * 1000)
+    public function alarm($time =  1000 * 1000)
     {
-        return \swoole_process::alarm($time);
+        return \swoole_process::alarm(60 * $time);
     }
     
     /**

@@ -27,15 +27,13 @@ class File
     {
         if (!$lock) {
             $this->handle->fwrite($message);
-            return true;
+        } else {
+            //获取独占锁
+            $this->handle->flock($lock);
+            $this->handle->fwrite($message);
+            //释放锁资源
+            $this->handle->flock(LOCK_UN);
         }
-            
-
-        //获取独占锁
-        $this->handle->flock($lock);
-        $this->handle->fwrite($message);
-        //释放锁资源
-        $this->handle->flock(LOCK_UN);
     }
     
     /**

@@ -51,7 +51,7 @@ class AutoLoad
     private static function loadClass($class)
     {
         $class_file = self::findFile($class);
-        
+
         if (!$class_file) throw new \Exception($class . ' not found');
         //加载文件
         require $class_file;
@@ -65,7 +65,7 @@ class AutoLoad
     {
         foreach (self::$classMap as $namespace => $dir) {
             if ('\\' !== substr($namespace,-1)) {
-                throw new \Exception('namspace must be \\ end');         
+                throw new \Exception('namespace must be \\ end');         
             }
             //查找对应类的命名空间
             if (0 === strpos($class, $namespace)) {
