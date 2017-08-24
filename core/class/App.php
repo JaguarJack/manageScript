@@ -5,6 +5,7 @@ namespace Core\Cen;
 use ReflectionClass;
 use Core\Cen\Di;
 use Core\Cen\ErrorException;
+use Core\Cen\Log;
 
 class App extends Di
 {
@@ -96,5 +97,16 @@ class App extends Di
         }
         
         return true;
+    }
+    
+    
+    /**
+     * @description:记录脚本运行时间
+     * @author wuyanwen(2017年8月24日)
+     */
+    public function __destruct()
+    {
+        $msg = $this->task . ' Task Run Time ' . secondsToHis(microtime(true));
+        Log::write(Log::INFO, $msg, $this->task);
     }
 }
