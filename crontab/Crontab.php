@@ -34,7 +34,7 @@ class Crontab
         $this->task_index   = $this->task_config['directory'];
         $this->task_num     = $this->task_config['task_num'] ?? 1;
         $this->task_max_num = $this->task_config['task_max_num'] ?? 5;
-        $this->process      = new Process;
+        $this->process      = new Process();
         $this->task_queue   = new Task;
     }
     
@@ -48,7 +48,8 @@ class Crontab
         $this->process->registerSignal(SIGALRM,function(){  
             $this->pushTasksToQueue();
             while ($this->task_queue->getTaskQueueLen()) {
-                $this->create($this->task_queue->getTask());
+                list($namepace, $task) = json_decode($this->task_queue->getTask(), true);
+                $this->create($task, $namepace);
             }
         });
         
@@ -64,7 +65,7 @@ class Crontab
      */
     public function start()
     {
-        $this->process->deamon();
+        //$this->process->deamon();
         $this->process->setTaskName('php Crond Master');
         $pid = getmypid();
         file_put_contents($this->task_config['pid_file'], $pid);
@@ -80,7 +81,7 @@ class Crontab
      */
     private function alarm()
     {
-        $this->process->alarm(3000 * 1000);
+        $this->process->alarm(300 * 1000);
     }
     
     
@@ -89,18 +90,18 @@ class Crontab
      * @description:启动任务
      * @author wuyanwen(2017年8月17日)
      */
-    private function create($task)
+    private function create($task, $namespace)
     {
-        if (count($this->tasks) > $this->task_max_num) {
-            Log::write(Log::INFO, 'Has exceeded the maximum task limit');
+        if (array_count_values($this->tasks)[$task] > $this->task_max_num) {
+            Log::write(Log::INFO, sprintf('Task %s Has exceeded the maximum task limit', $task));
             return false;
         }
         
         try {
-            $pid = $this->process->createProccess(function(\swoole_process $worker) use ($task){
+            $pid = $this->process->createProccess(function(\swoole_process $worker) use ($task, $namespace){
                 try {
-                    $worker->exec($this->php,[$this->task_index, $task]);
-                    $worker->name('php Task ' .$task. ' Is Runing');
+                    $task = $namespace ? [$this->task_index, $namespace, $task] : [$this->task_index, $task];
+                    $worker->exec($this->php,$task);
                 } catch (ErrorException $e) {
                     Log::write(Log::INFO, $e->getMessage());
                 }

@@ -46,7 +46,7 @@ class TaskManage
             
            //如果是可执行的任务，直接推送到队列中
            if ($parse->isExcuted()) {
-              $this->queue->rpush('task', $task->task_name);
+               $this->queue->rpush('task', json_encode([$task->namespace, $task->task_name]));
            }
         }
     }
