@@ -26,7 +26,7 @@ class Master
     //端口号
     private $port;
     //守护进程
-    private $daeme;
+    private $daemon;
     //Master_id
     public $master_id;
     //server 配置
@@ -41,7 +41,17 @@ class Master
     
     public function __construct($host = '',$port = '')
     {
-        
+        $this->init($host, $port);
+    }
+    
+    /**
+     * @description:初始化
+     * @author wuyanwen(2017年8月25日)
+     * @param unknown $host
+     * @param unknown $port
+     */
+    private function init($host, $port)
+    {
         $this->master_config = Config::get('config.master');
         $this->host = $host ? : $this->master_config['host'];
         $this->port = $port ? : $this->master_config['port'];
@@ -54,14 +64,13 @@ class Master
         $this->server =  $this->server ?  :
         new \swoole_server($this->host, $this->port,SWOOLE_BASE,SWOOLE_SOCK_TCP);
     }
-    
     /**
      * @description:设置参数
      * @author wuyanwen(2017年4月17日)
      */
     protected function set()
     {
-        $this->params['daemonize'] = $this->master_config['daeme'];
+        $this->params['daemonize'] = $this->master_config['daemon'];
         if ($this->master_config['pid_file'])
             $this->params['pid_file'] = $this->master_config['pid_file'];
         
@@ -75,23 +84,23 @@ class Master
      * @description:接收消息
      * @author wuyanwen(2017年4月17日)
      */
-    protected function receive()
+    public function receive($server,$fd, $from_id, $data)
     {
-        $this->server->on('receive', function ($server, $fd, $from_id, $data){
-            //解析脚本操作
-            try {
-                list($option,$script) = explode(',', $data);
-                //执行操作
-                $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
-                //发送执行结果
-                $this->server->send($fd,json_encode($msg));
-                //关闭连接
-                $this->server->close($fd);
-            } catch (\Exception $e) {
-                echo $e->getMessage() . PHP_EOL;
-                echo $e->getTraceAsString();
-            }
-        });
+        
+        //解析脚本操作
+        try {
+            list($option,$script) = explode(',', $data);
+            //执行操作
+            $msg = call_user_func_array([__CLASS__,$option.'Script'], [$script]);
+            //发送执行结果
+            $this->server->send($fd,json_encode($msg));
+            //关闭连接
+            $this->server->close($fd);
+        } catch (\Exception $e) {
+            echo $e->getMessage() . PHP_EOL;
+            echo $e->getTraceAsString();
+        }
+       
     }
 
     /**
@@ -373,11 +382,10 @@ class Master
      * @description:信号注册处理
      * @author wuyanwen(2017年8月17日)
      */
-    private function workStart(){
-        $this->server->on('workerStart', function ($server){
-            swoole_set_process_name('php Script Master');
-            $this->dealSignal();
-        });
+    public function workerStart()
+    {
+        $this->process->setTaskName('php Script Master');
+        $this->dealSignal();
     }
     
     /**
@@ -386,12 +394,11 @@ class Master
      */
     public function start()
     {
-        
         //设置参数
         $this->set();
-        $this->workStart();
+        $this->server->on('WorkerStart', [$this, 'workerStart']);
         //接收消息
-        $this->receive();
+        $this->server->on('receive', [$this, 'receive']);
         //启动server
         $this->server->start();       
     } 

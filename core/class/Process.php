@@ -2,8 +2,6 @@
 
 namespace Core\Cen;
 
-use Core\Cen\Log;
-
 class Process
 {
     /**
@@ -31,8 +29,7 @@ class Process
      */
     public function kill($pid)
     {
-        $ret = \swoole_process::kill($pid);
-        Log::write(Log::INFO, 'task pid is ' . $pid . $ret ? 'is over' : 'kill failure');
+        return \swoole_process::kill($pid);
     }
     
     /**
