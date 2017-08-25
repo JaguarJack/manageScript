@@ -65,7 +65,7 @@ class Crontab
      */
     public function start()
     {
-        //$this->process->deamon();
+        $this->process->deamon();
         $this->process->setTaskName('php Crond Master');
         $pid = getmypid();
         file_put_contents($this->task_config['pid_file'], $pid);
