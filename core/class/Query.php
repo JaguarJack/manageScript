@@ -26,10 +26,12 @@ class Query
     private $order;
     //limit
     private $limit;
+    //group
+    private $groupBy;
     //sql string
     private $sql;
     //selectSQL;
-    private $selectSQL = 'select {field} from {table} {alias}{join} {where} {order} {limit}';
+    private $selectSQL = 'select {field} from {table} {alias}{join} {where} {order} {groupBy} {limit}';
     //updateSQL;
     private $updateSQL = 'update {table} set {value} {where}';
     //insertSQL;
@@ -202,6 +204,19 @@ class Query
     }
     
     /**
+     * @description:分组
+     * @author wuyanwen(2017年8月28日)
+     * @param unknown $field
+     */
+    public function groupBy($field)
+    {
+        if ($field) {
+            $this->groupBy = 'group by ' . $field;
+        }
+        
+        return $this;
+    }
+    /**
      * description:限制开始
      * @author: wuyanwen(2017年7月9日)
      */
@@ -317,8 +332,8 @@ class Query
 
         //替换
         return str_replace(
-            ['{field}','{table}','{alias}','{join}','{where}','{order}','{limit}'],
-            [$this->field,$this->table,$this->alias,$this->join,$this->condition,$this->order,$this->limit],
+            ['{field}','{table}','{alias}','{join}','{where}','{order}','{groupBy}','{limit}'],
+            [$this->field,$this->table,$this->alias,$this->join,$this->condition,$this->order,$this->groupBy,$this->limit],
             $this->selectSQL);
     }
     
